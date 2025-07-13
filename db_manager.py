@@ -28,7 +28,7 @@ def login_usuario(conexion, email, password):
     cursor.close()
     return usuario, usuario['Tipo_Usuario']
 
-# --- FUNCIONES DE CREACIÓN (CRUD) ---
+# --- FUNCIONES DE CREACIÓN (CRUD - CREATE) ---
 def registrar_usuario_db(conexion, tipo_usuario, datos):
     cursor = conexion.cursor()
     email, password = datos.get("Email"), datos.get("Contraseña")
@@ -104,7 +104,6 @@ def contratar_postulante_db(conexion, id_postulacion, salario, tipo_contrato):
     finally:
         cursor.close()
 
-
 def aplicar_a_vacante_db(conexion, id_postulante, id_vacante):
     cursor = conexion.cursor()
     try:
@@ -149,7 +148,7 @@ def ejecutar_nomina_db(conexion, id_empresa, mes, anio):
     finally:
         cursor.close()
 
-# --- FUNCIONES DE CONSULTA (GETTERS) ---
+# --- FUNCIONES DE CONSULTA (CRUD - READ) ---
 def get_active_vacantes(conexion):
     cursor = conexion.cursor(dictionary=True)
     query = "SELECT v.ID_Vacante, v.Cargo_Vacante, v.Descripcion_Perfil, v.Salario_Ofrecido, e.Nombre_Empresa FROM Vacantes v JOIN Empresas e ON v.ID_Empresa = e.ID_Empresa WHERE v.Estatus = 'Activa'"
@@ -164,7 +163,7 @@ def get_postulaciones_para_contratar(conexion):
 
 def get_vacantes_por_empresa(conexion, id_empresa):
     cursor = conexion.cursor(dictionary=True)
-    query = "SELECT ID_Vacante, Cargo_Vacante, Salario_Ofrecido, Estatus FROM Vacantes WHERE ID_Empresa = %s"
+    query = "SELECT ID_Vacante, Cargo_Vacante, Descripcion_Perfil, Salario_Ofrecido, Estatus FROM Vacantes WHERE ID_Empresa = %s"
     cursor.execute(query, (id_empresa,))
     return cursor.fetchall()
 
@@ -186,19 +185,13 @@ def get_datos_constancia(conexion, id_postulante):
     cursor.execute(query, (id_postulante,))
     datos = cursor.fetchone()
     if not datos: return None
-    meses_es = (
-        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-    )
-    
+    meses_es = ("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
     fecha_contrato = datos['Fecha_Contratacion']
     fecha_hoy = datetime.now()
-
     fecha_inicio_str = f"{fecha_contrato.day} de {meses_es[fecha_contrato.month - 1]} de {fecha_contrato.year}"
     fecha_actual_str = f"{fecha_hoy.day} de {meses_es[fecha_hoy.month - 1]} de {fecha_hoy.year}"
     nombre_completo = f"{datos['Nombres']} {datos['Apellidos']}"
-    salario_str = f"{datos['Salario_Acordado']:.2f}"
-    
+    salario_str = f"{float(datos['Salario_Acordado']):.2f}"
     constancia = f"                 A QUIEN PUEDA INTERESAR\n\nPor medio de la presente la empresa HIRING GROUP hace constar que el ciudadano(a)\n{nombre_completo}, labora con nosotros desde {fecha_inicio_str}, cumpliendo\nfunciones en el cargo de {datos['Cargo_Vacante']} en la empresa {datos['Nombre_Empresa']}, devengando un\nsalario mensual de {salario_str}.\n\nConstancia que se pide por la parte interesada en la ciudad de Puerto Ordaz en fecha\n{fecha_actual_str}"
     return constancia
 
@@ -211,3 +204,146 @@ def get_profesiones(conexion):
     cursor = conexion.cursor(dictionary=True)
     cursor.execute("SELECT ID_Profesion, Nombre_Profesion FROM Profesiones ORDER BY Nombre_Profesion")
     return cursor.fetchall()
+
+def get_all_users_for_admin(conexion):
+    """Obtiene todos los usuarios excepto los del tipo 'HiringGroup'."""
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        query = "SELECT ID_Usuario, Email, Tipo_Usuario FROM Usuarios WHERE Tipo_Usuario != 'HiringGroup' ORDER BY ID_Usuario"
+        cursor.execute(query)
+        return cursor.fetchall()
+    except Error as e:
+        print(f"Error al obtener usuarios: {e}")
+        return []
+    finally:
+        cursor.close()
+
+# --- FUNCIONES DE ACTUALIZACIÓN (CRUD - UPDATE) ---
+def actualizar_usuario_db(conexion, id_usuario, tipo_usuario, datos):
+    """Actualiza la información de un usuario (Postulante o Empresa)."""
+    cursor = conexion.cursor()
+    try:
+        conexion.start_transaction()
+        if "Contraseña" in datos and datos["Contraseña"]:
+            sql_usuario = "UPDATE Usuarios SET Password = %s WHERE ID_Usuario = %s"
+            cursor.execute(sql_usuario, (datos["Contraseña"], id_usuario))
+        
+        if tipo_usuario == 'Empresa':
+            sql_especifico = "UPDATE Empresas SET Nombre_Empresa = %s, Sector_Industrial = %s WHERE ID_Empresa = %s"
+            valores = (datos.get("Nombre Empresa"), datos.get("Sector"), id_usuario)
+            cursor.execute(sql_especifico, valores)
+        elif tipo_usuario == 'Postulante':
+            sql_especifico = "UPDATE Postulantes SET Nombres = %s, Apellidos = %s, Telefono = %s WHERE ID_Postulante = %s"
+            valores = (datos.get("Nombres"), datos.get("Apellidos"), datos.get("Teléfono"), id_usuario)
+            cursor.execute(sql_especifico, valores)
+        
+        conexion.commit()
+        return True, "Datos actualizados con éxito."
+    except Error as e:
+        conexion.rollback()
+        return False, f"Error al actualizar los datos: {e}"
+    finally:
+        cursor.close()
+
+def actualizar_vacante_db(conexion, id_vacante, cargo, descripcion, salario, estatus):
+    """Actualiza los detalles de una vacante específica."""
+    cursor = conexion.cursor()
+    try:
+        sql = "UPDATE Vacantes SET Cargo_Vacante = %s, Descripcion_Perfil = %s, Salario_Ofrecido = %s, Estatus = %s WHERE ID_Vacante = %s"
+        cursor.execute(sql, (cargo, descripcion, salario, estatus, id_vacante))
+        conexion.commit()
+        return True, "Vacante actualizada con éxito."
+    except Error as e:
+        return False, f"Error al actualizar la vacante: {e}"
+    finally:
+        cursor.close()
+
+def terminar_contrato_db(conexion, id_contrato):
+    """Cambia el estatus de un contrato a 'Inactivo'."""
+    cursor = conexion.cursor()
+    try:
+        sql = "UPDATE Contratos SET Estatus = 'Inactivo' WHERE ID_Contrato = %s"
+        cursor.execute(sql, (id_contrato,))
+        conexion.commit()
+        return True, "El contrato ha sido finalizado."
+    except Error as e:
+        return False, f"Error al terminar el contrato: {e}"
+    finally:
+        cursor.close()
+
+def actualizar_profesion_db(conexion, id_profesion, nuevo_nombre):
+    """Actualiza el nombre de una profesión existente."""
+    cursor = conexion.cursor()
+    try:
+        sql = "UPDATE Profesiones SET Nombre_Profesion = %s WHERE ID_Profesion = %s"
+        cursor.execute(sql, (nuevo_nombre, id_profesion))
+        conexion.commit()
+        return True, "Profesión actualizada con éxito."
+    except mysql.connector.IntegrityError:
+        return False, "Error: El nuevo nombre de la profesión ya existe."
+    except Error as e:
+        return False, f"Error al actualizar la profesión: {e}"
+    finally:
+        cursor.close()
+
+# --- FUNCIONES DE ELIMINACIÓN (CRUD - DELETE) ---
+def eliminar_vacante_db(conexion, id_vacante):
+    """Elimina una vacante si no tiene postulaciones asociadas."""
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT COUNT(*) as count FROM Postulaciones WHERE ID_Vacante = %s", (id_vacante,))
+        if cursor.fetchone()['count'] > 0:
+            return False, "No se puede eliminar la vacante porque tiene postulaciones. Considere cerrarla en su lugar."
+            
+        sql = "DELETE FROM Vacantes WHERE ID_Vacante = %s"
+        cursor.execute(sql, (id_vacante,))
+        conexion.commit()
+        if cursor.rowcount > 0:
+            return True, "Vacante eliminada con éxito."
+        else:
+            return False, "No se encontró la vacante especificada."
+    except Error as e:
+        return False, f"Error al eliminar la vacante: {e}"
+    finally:
+        cursor.close()
+
+def eliminar_usuario_db(conexion, id_usuario):
+    """Elimina un usuario y sus datos relacionados."""
+    cursor = conexion.cursor()
+    try:
+        conexion.start_transaction()
+        cursor.execute("DELETE FROM Postulantes WHERE ID_Postulante = %s", (id_usuario,))
+        cursor.execute("DELETE FROM Empresas WHERE ID_Empresa = %s", (id_usuario,))
+        cursor.execute("DELETE FROM Usuarios WHERE ID_Usuario = %s", (id_usuario,))
+        conexion.commit()
+        if cursor.rowcount > 0:
+            return True, "Usuario eliminado con éxito."
+        else:
+            return False, "No se encontró el usuario para eliminar."
+            
+    except mysql.connector.IntegrityError as e:
+        conexion.rollback()
+        return False, f"Error de integridad: No se puede eliminar el usuario porque tiene registros asociados. ({e})"
+    except Error as e:
+        conexion.rollback()
+        return False, f"Error inesperado al eliminar el usuario: {e}"
+    finally:
+        cursor.close()
+
+def eliminar_profesion_db(conexion, id_profesion):
+    """Elimina una profesión si no está siendo utilizada en ninguna vacante."""
+    cursor = conexion.cursor()
+    try:
+        sql = "DELETE FROM Profesiones WHERE ID_Profesion = %s"
+        cursor.execute(sql, (id_profesion,))
+        conexion.commit()
+        if cursor.rowcount > 0:
+            return True, "Profesión eliminada con éxito."
+        else:
+            return False, "No se encontró la profesión."
+    except mysql.connector.IntegrityError:
+        return False, "Error: No se puede eliminar la profesión porque está asignada a una o más vacantes."
+    except Error as e:
+        return False, f"Error inesperado al eliminar la profesión: {e}"
+    finally:
+        cursor.close()
