@@ -1,3 +1,14 @@
+# ==============================================================================
+#  app_gui.py - VERSIÓN FINAL COMPLETA Y CORREGIDA
+# ==============================================================================
+#  - Corrige todos los errores de `KeyError` y `AttributeError`.
+#  - Valida entradas numéricas (salario, mes, año).
+#  - Muestra un cursor de espera durante operaciones de BD.
+#  - Maneja correctamente los valores NULL de la BD al editar perfiles.
+#  - Utiliza callbacks para refrescar vistas de forma segura.
+#  - Mantiene la lógica de conexión automática para XAMPP.
+# ==============================================================================
+
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, scrolledtext
 import db_manager
@@ -138,21 +149,10 @@ class GestionarExperienciaWindow(FormularioBase):
             self.tree.insert("", "end", values=(exp['ID_Experiencia'], exp['Empresa'], exp['Cargo_Ocupado'], exp['Fecha_Inicio'], exp['Fecha_Fin'] or 'Actual'))
 
     def agregar(self):
-        # --- LÓGICA CORREGIDA AQUÍ ---
         datos = {k: (v.get("1.0", "end-1c") if isinstance(v, scrolledtext.ScrolledText) else v.get()) for k, v in self.entries.items()}
-        
-        # Usar las claves completas y exactas
         if not datos['Empresa'] or not datos['Cargo'] or not datos['Fecha Inicio (YYYY-MM-DD)']:
             messagebox.showerror("Error", "Empresa, Cargo y Fecha de Inicio son obligatorios.", parent=self); return
-            
-        # Mapear a los nombres de clave que espera la función de db_manager
-        datos_db = {
-            'Empresa': datos['Empresa'], 
-            'Cargo': datos['Cargo'], 
-            'Fecha Inicio': datos['Fecha Inicio (YYYY-MM-DD)'], 
-            'Fecha Fin': datos['Fecha Fin (YYYY-MM-DD, opcional)'], 
-            'Descripcion': datos['Descripción']
-        }
+        datos_db = {'Empresa': datos['Empresa'], 'Cargo': datos['Cargo'], 'Fecha Inicio': datos['Fecha Inicio (YYYY-MM-DD)'], 'Fecha Fin': datos['Fecha Fin (YYYY-MM-DD, opcional)'], 'Descripcion': datos['Descripción']}
         
         self.controller.config(cursor="watch"); self.controller.update_idletasks()
         success, msg = db_manager.crear_experiencia_db(self.controller.conexion, self.id_postulante, datos_db)
@@ -428,9 +428,19 @@ class MainFrame(tk.Frame):
                 if salario_val <= 0: raise ValueError
             except (ValueError, TypeError): messagebox.showerror("Entrada no válida", "El salario debe ser un número positivo."); return
             id_postulacion = tree.item(selected[0])['values'][0]
-            datos_contrato = {k.replace(" ", "_"): v.get() for k, v in entries.items()}
-            datos_contrato["ID_Banco"] = bancos_map.get(datos_contrato.pop('Banco'))
-            if not all(v for k,v in datos_contrato.items() if (k != 'ID_Banco' and v) or (k == 'ID_Banco' and v is not None)): messagebox.showerror("Error", "Todos los campos son obligatorios."); return
+            
+            datos_contrato = {
+                'Salario_Acordado': salario_val,
+                'Tipo_Contrato': entries['Tipo Contrato'].get(),
+                'Tipo_Sangre': entries['Tipo de Sangre'].get(),
+                'Contacto_Emergencia_Nombre': entries['Nombre Contacto Emergencia'].get(),
+                'Contacto_Emergencia_Telefono': entries['Teléfono Contacto Emergencia'].get(),
+                'Numero_Cuenta': entries['Número de Cuenta'].get(),
+                'ID_Banco': bancos_map.get(entries['Banco'].get())
+            }
+            
+            if not all(v is not None if k == 'ID_Banco' else v for k,v in datos_contrato.items()): messagebox.showerror("Error", "Todos los campos son obligatorios."); return
+            
             self.controller.config(cursor="watch"); self.controller.update_idletasks()
             success, msg = db_manager.contratar_postulante_db(self.controller.conexion, id_postulacion, datos_contrato)
             self.controller.config(cursor="")
@@ -458,7 +468,9 @@ class MainFrame(tk.Frame):
             sort_map = {"Mayor a Menor": "DESC", "Menor a Mayor": "ASC"}; sort_salary = sort_map.get(salary_combo.get())
             vacantes = db_manager.get_active_vacantes(self.controller.conexion, filtro_area=filtro_area, sort_salary=sort_salary)
             self.controller.config(cursor="")
-            for v in vacantes: tree.insert("", "end", values=(v['ID_Vacante'], v['Cargo_Vacante'], v['Nombre_Empresa'], v['Nombre_Area'], v['Nombre_Profesion'], f"{float(v['Salario_Ofrecido']):.2f}"))
+            for v in vacantes:
+                area_nombre = v['Nombre_Area'] or 'No Asignada'
+                tree.insert("", "end", values=(v['ID_Vacante'], v['Cargo_Vacante'], v['Nombre_Empresa'], area_nombre, v['Nombre_Profesion'], f"{float(v['Salario_Ofrecido']):.2f}"))
         ttk.Button(filter_frame, text="Filtrar", command=populate_tree).pack(side=tk.LEFT, padx=10)
         if not read_only: ttk.Button(self.content_frame, text="Aplicar a Vacante", command=lambda: self.aplicar(tree), style="Accent.TButton").pack(pady=10, anchor="e")
         populate_tree()
