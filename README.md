@@ -1,1 +1,2 @@
-# ProyectoBD
+Instalar TK
+Instalar mysql.connector
