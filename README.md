@@ -1,2 +1,4 @@
-Instalar TK
+Instalar tk
+
+
 Instalar mysql.connector
