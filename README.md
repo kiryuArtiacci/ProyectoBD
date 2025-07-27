@@ -1,4 +1,4 @@
-Instalar tk
+Instalar customtk
 
 
-Instalar mysql.connector
+Instalar sqlite
