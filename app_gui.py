@@ -1,21 +1,26 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog, scrolledtext
+from tkinter import ttk, messagebox
+import customtkinter as ctk
 import db_manager
 
+# --- NUEVA PALETA DE COLORES "NEON GRID" ---
+APP_BG_COLOR = "#020617"
+FRAME_BG_COLOR = "#0F172A"
+ENTRY_BG_COLOR = "#1E293B"
+BUTTON_SECONDARY_COLOR = "#334155"
+BUTTON_SECONDARY_HOVER = "#475569"
+ACCENT_PURPLE = "#A855F7"
+ACCENT_PINK = "#EC4899"
+TEXT_COLOR = "#E2E8F0"
+
 # --- CONSTANTES DE ESTILO ---
-BG_COLOR = "#0F172A"
-FG_COLOR = "#E2E8F0"
-ENTRY_BG = "#1E293B"
-BUTTON_BG = "#334155"
-ACCENT_COLOR = "#9333EA"
-ACCENT_ACTIVE = "#A855F7"
-FONT_NORMAL = ("Segoe UI", 10)
-FONT_BOLD = ("Segoe UI", 10, "bold")
-FONT_TITLE = ("Segoe UI", 16, "bold")
-FONT_MENU_TITLE = ("Segoe UI", 12, "bold")
+FONT_NORMAL = ("Segoe UI", 12)
+FONT_BOLD = ("Segoe UI", 12, "bold")
+FONT_TITLE = ("Segoe UI", 20, "bold")
+FONT_MENU_TITLE = ("Segoe UI", 16, "bold")
 
 
-# --- FUNCIÓN DE UTILIDAD ---
+# --- FUNCIÓN DE UTILIDAD (PARA EL TREEVIEW) ---
 def crear_tabla(parent, cols, widths={}):
     tree = ttk.Treeview(parent, columns=cols, show="headings", style="Treeview")
     for col in cols:
@@ -24,70 +29,81 @@ def crear_tabla(parent, cols, widths={}):
     return tree
 
 
-# --- CLASES DE VENTANAS DE FORMULARIO (TOPLEVEL) ---
-class FormularioBase(tk.Toplevel):
+# --- CLASES DE FORMULARIO (BASE) ---
+class FormularioBase(ctk.CTkToplevel):
     def __init__(self, parent, controller, title):
-        super().__init__(parent)
+        super().__init__(parent, fg_color=APP_BG_COLOR)
         self.title(title)
-        self.config(bg=BG_COLOR, padx=20, pady=20)
         self.transient(parent)
         self.grab_set()
         self.controller = controller
         self.entries = {}
         self.resizable(False, False)
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_frame.pack(padx=20, pady=20, fill="both", expand=True)
 
     def crear_campo(self, frame, texto_label, tipo="entry", **kwargs):
-        row = tk.Frame(frame, bg=BG_COLOR)
-        label = tk.Label(
+        row = ctk.CTkFrame(frame, fg_color="transparent")
+        label = ctk.CTkLabel(
             row,
-            width=20,
+            width=150,
             text=f"{texto_label}:",
             anchor="w",
-            bg=BG_COLOR,
-            fg=FG_COLOR,
             font=FONT_NORMAL,
         )
         widget = None
         if tipo == "entry":
-            widget = tk.Entry(
+            widget = ctk.CTkEntry(
                 row,
-                width=40,
-                bg=ENTRY_BG,
-                fg=FG_COLOR,
-                insertbackground=FG_COLOR,
-                relief=tk.FLAT,
+                width=300,
                 font=FONT_NORMAL,
+                fg_color=ENTRY_BG_COLOR,
+                border_color=BUTTON_SECONDARY_COLOR,
+                text_color=TEXT_COLOR,
             )
             if "Contraseña" in texto_label:
-                widget.config(show="*")
+                widget.configure(show="*")
         elif tipo == "combobox":
-            widget = ttk.Combobox(
+            widget = ctk.CTkComboBox(
                 row,
-                width=37,
+                width=300,
                 state="readonly",
                 font=FONT_NORMAL,
                 values=kwargs.get("values", []),
+                fg_color=ENTRY_BG_COLOR,
+                border_color=BUTTON_SECONDARY_COLOR,
+                button_color=BUTTON_SECONDARY_COLOR,
+                button_hover_color=BUTTON_SECONDARY_HOVER,
+                text_color=TEXT_COLOR,
             )
-        elif tipo == "scrolledtext":
-            widget = scrolledtext.ScrolledText(
+        elif tipo == "textbox":
+            widget = ctk.CTkTextbox(
                 row,
-                width=40,
-                height=4,
-                bg=ENTRY_BG,
-                fg=FG_COLOR,
-                relief=tk.FLAT,
+                width=300,
+                height=80,
                 font=FONT_NORMAL,
+                fg_color=ENTRY_BG_COLOR,
+                border_color=BUTTON_SECONDARY_COLOR,
+                text_color=TEXT_COLOR,
             )
-        row.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+        row.pack(side=tk.TOP, fill=tk.X, padx=5, pady=8)
         label.pack(side=tk.LEFT)
         if widget:
-            widget.pack(side=tk.RIGHT, expand=tk.YES, fill=tk.X, ipady=4)
+            widget.pack(side=tk.RIGHT, expand=tk.YES, fill=tk.X)
         self.entries[texto_label.replace(":", "")] = widget
         return widget
 
 
+# --- CLASES DE FORMULARIO (ESPECÍFICAS) ---
 class CrearUsuarioWindow(FormularioBase):
-    def __init__(self, parent, controller, **kwargs):
+    def __init__(
+        self,
+        parent,
+        controller,
+        is_first_user=False,
+        on_success_callback=None,
+        **kwargs,
+    ):
         super().__init__(parent, controller, "Crear Nuevo Usuario")
         self.campos_especificos = {
             "Postulante": ["Nombres", "Apellidos", "Cédula", "Teléfono", "Universidad"],
@@ -101,34 +117,41 @@ class CrearUsuarioWindow(FormularioBase):
             ],
             "HiringGroup": [],
         }
+        self.on_success_callback = on_success_callback
         self.universidades = db_manager.get_catalogo(
-            self.controller.conexion,
-            "Universidades",
-            "ID_Universidad",
-            "Nombre_Universidad",
+            "Universidades", "ID_Universidad", "Nombre_Universidad"
         )
         self.uni_map = {
-            u["Nombre_Universidad"]: u["ID_Universidad"] for u in self.universidades
+            u["Nombre_Universidad"]: u["ID_Universidad"]
+            for u in self.universidades or []
         }
-        top_frame = tk.Frame(self, bg=BG_COLOR)
-        self.crear_campo(
+        top_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        tipo_usuario_combo = self.crear_campo(
             top_frame,
             "Tipo de Usuario",
             "combobox",
             values=list(self.campos_especificos.keys()),
         )
-        self.entries["Tipo de Usuario"].bind(
-            "<<ComboboxSelected>>", self.actualizar_campos
-        )
-        top_frame.pack()
-        self.form_frame = tk.Frame(self, bg=BG_COLOR)
-        self.form_frame.pack(pady=10)
-        ttk.Button(
-            self, text="Crear Usuario", command=self.crear, style="Accent.TButton"
+        tipo_usuario_combo.configure(command=self.actualizar_campos)
+        top_frame.pack(fill="x")
+        if is_first_user:
+            self.title("Crear Primer Usuario Administrador")
+            tipo_usuario_combo.set("HiringGroup")
+            tipo_usuario_combo.configure(state="disabled")
+        self.form_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.form_frame.pack(pady=10, fill="x")
+        ctk.CTkButton(
+            self.main_frame,
+            text="Crear Usuario",
+            command=self.crear,
+            corner_radius=10,
+            height=40,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
         ).pack(pady=15)
         self.actualizar_campos(None)
 
-    def actualizar_campos(self, event):
+    def actualizar_campos(self, event=None):
         for widget in self.form_frame.winfo_children():
             widget.destroy()
         keys_to_remove = [
@@ -153,7 +176,12 @@ class CrearUsuarioWindow(FormularioBase):
                 "Error", "Debes seleccionar un tipo de usuario.", parent=self
             )
             return
-        datos = {k: v.get() for k, v in self.entries.items()}
+        datos = {
+            k: v.get("1.0", "end-1c").strip()
+            if isinstance(v, ctk.CTkTextbox)
+            else v.get()
+            for k, v in self.entries.items()
+        }
         datos_db = {
             "Email": datos.get("Email"),
             "Contraseña": datos.get("Contraseña"),
@@ -169,16 +197,14 @@ class CrearUsuarioWindow(FormularioBase):
             "Teléfono de Contacto": datos.get("Teléfono de Contacto"),
             "Email de Contacto": datos.get("Email de Contacto"),
         }
-
         self.controller.config(cursor="watch")
         self.controller.update_idletasks()
-        success, message = db_manager.registrar_usuario_db(
-            self.controller.conexion, tipo_usuario, datos_db
-        )
+        success, message = db_manager.registrar_usuario_db(tipo_usuario, datos_db)
         self.controller.config(cursor="")
-
         if success:
             messagebox.showinfo("Éxito", message, parent=self)
+            if self.on_success_callback:
+                self.on_success_callback()
             self.destroy()
         else:
             messagebox.showerror("Error al Crear", message, parent=self)
@@ -189,16 +215,14 @@ class ActualizarUsuarioWindow(FormularioBase):
         super().__init__(parent, controller, "Editar Mi Perfil")
         self.tipo_usuario = self.controller.rol_actual
         self.id_usuario = self.controller.usuario_actual["ID_Usuario"]
-        form_frame = tk.Frame(self, bg=BG_COLOR)
+        form_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         if self.tipo_usuario in ["Postulante", "Contratado"]:
             self.universidades = db_manager.get_catalogo(
-                self.controller.conexion,
-                "Universidades",
-                "ID_Universidad",
-                "Nombre_Universidad",
+                "Universidades", "ID_Universidad", "Nombre_Universidad"
             )
             self.uni_map = {
-                u["Nombre_Universidad"]: u["ID_Universidad"] for u in self.universidades
+                u["Nombre_Universidad"]: u["ID_Universidad"]
+                for u in self.universidades or []
             }
             self.inv_uni_map = {v: k for k, v in self.uni_map.items()}
             self.crear_campo(form_frame, "Nombres")
@@ -216,18 +240,19 @@ class ActualizarUsuarioWindow(FormularioBase):
             self.crear_campo(form_frame, "Email de Contacto")
             self.populate_empresa()
         self.crear_campo(form_frame, "Nueva Contraseña (opcional)")
-        form_frame.pack(pady=10)
-        ttk.Button(
-            self,
+        form_frame.pack(pady=10, fill="x")
+        ctk.CTkButton(
+            self.main_frame,
             text="Guardar Cambios",
             command=self.actualizar,
-            style="Accent.TButton",
+            corner_radius=10,
+            height=40,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
         ).pack(pady=15)
 
     def populate_postulante(self):
-        datos = db_manager.get_single_postulante(
-            self.controller.conexion, self.id_usuario
-        )
+        datos = db_manager.get_single_postulante(self.id_usuario)
         if not datos:
             return
         self.entries["Nombres"].insert(0, datos["Nombres"] or "")
@@ -238,7 +263,7 @@ class ActualizarUsuarioWindow(FormularioBase):
         )
 
     def populate_empresa(self):
-        datos = db_manager.get_single_empresa(self.controller.conexion, self.id_usuario)
+        datos = db_manager.get_single_empresa(self.id_usuario)
         if not datos:
             return
         self.entries["Nombre Empresa"].insert(0, datos["Nombre_Empresa"] or "")
@@ -249,26 +274,22 @@ class ActualizarUsuarioWindow(FormularioBase):
 
     def actualizar(self):
         datos = {
-            k: (
-                v.get("1.0", "end-1c")
-                if isinstance(v, scrolledtext.ScrolledText)
-                else v.get()
-            )
+            k: v.get("1.0", "end-1c").strip()
+            if isinstance(v, ctk.CTkTextbox)
+            else v.get()
             for k, v in self.entries.items()
         }
         datos_db = {k.strip().replace(" (opcional)", ""): v for k, v in datos.items()}
         if self.tipo_usuario in ["Postulante", "Contratado"]:
             datos_db["ID_Universidad"] = self.uni_map.get(datos_db.get("Universidad"))
-        if "Nueva Contraseña" in datos_db:
+        if "Nueva Contraseña" in datos_db and datos_db["Nueva Contraseña"]:
             datos_db["Contraseña"] = datos_db.pop("Nueva Contraseña")
-
         self.controller.config(cursor="watch")
         self.controller.update_idletasks()
         success, message = db_manager.actualizar_usuario_db(
-            self.controller.conexion, self.id_usuario, self.tipo_usuario, datos_db
+            self.id_usuario, self.tipo_usuario, datos_db
         )
         self.controller.config(cursor="")
-
         if success:
             messagebox.showinfo("Éxito", message, parent=self)
             self.destroy()
@@ -280,52 +301,47 @@ class GestionarExperienciaWindow(FormularioBase):
     def __init__(self, parent, controller, **kwargs):
         super().__init__(parent, controller, "Gestionar Mi Experiencia Laboral")
         self.id_postulante = self.controller.usuario_actual["ID_Usuario"]
-        add_frame = tk.LabelFrame(
-            self,
-            text="Añadir/Editar Experiencia",
-            bg=BG_COLOR,
-            fg=FG_COLOR,
-            padx=10,
-            pady=10,
-            font=FONT_BOLD,
-        )
+        add_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
         add_frame.pack(fill="x", pady=10)
+        ctk.CTkLabel(add_frame, text="Añadir/Editar Experiencia", font=FONT_BOLD).pack(
+            pady=(5, 10)
+        )
         self.crear_campo(add_frame, "Empresa")
         self.crear_campo(add_frame, "Cargo")
         self.crear_campo(add_frame, "Fecha Inicio (YYYY-MM-DD)")
         self.crear_campo(add_frame, "Fecha Fin (YYYY-MM-DD, opcional)")
-        self.crear_campo(add_frame, "Descripción", "scrolledtext")
-        ttk.Button(
+        self.crear_campo(add_frame, "Descripción", "textbox")
+        ctk.CTkButton(
             add_frame,
             text="Agregar Experiencia",
             command=self.agregar,
-            style="Accent.TButton",
+            corner_radius=10,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
         ).pack(pady=10)
-        tree_frame = tk.LabelFrame(
-            self,
-            text="Mis Experiencias",
-            bg=BG_COLOR,
-            fg=FG_COLOR,
-            padx=10,
-            pady=10,
-            font=FONT_BOLD,
-        )
+        tree_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
         tree_frame.pack(fill="both", expand=True, pady=10)
+        ctk.CTkLabel(tree_frame, text="Mis Experiencias", font=FONT_BOLD).pack(
+            pady=(5, 10)
+        )
         self.tree = crear_tabla(
             tree_frame, ("ID", "Empresa", "Cargo", "Inicio", "Fin"), widths={"ID": 30}
         )
-        self.tree.pack(fill="both", expand=True)
-        ttk.Button(
-            tree_frame, text="Eliminar Seleccionada", command=self.eliminar
-        ).pack(pady=10, anchor="e")
+        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
+        ctk.CTkButton(
+            tree_frame,
+            text="Eliminar Seleccionada",
+            command=self.eliminar,
+            corner_radius=10,
+            fg_color=BUTTON_SECONDARY_COLOR,
+            hover_color=BUTTON_SECONDARY_HOVER,
+        ).pack(pady=10, anchor="e", padx=10)
         self.populate_tree()
 
     def populate_tree(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
-        for exp in db_manager.get_experiencias_db(
-            self.controller.conexion, self.id_postulante
-        ):
+        for exp in db_manager.get_experiencias_db(self.id_postulante) or []:
             self.tree.insert(
                 "",
                 "end",
@@ -340,11 +356,9 @@ class GestionarExperienciaWindow(FormularioBase):
 
     def agregar(self):
         datos = {
-            k: (
-                v.get("1.0", "end-1c")
-                if isinstance(v, scrolledtext.ScrolledText)
-                else v.get()
-            )
+            k: v.get("1.0", "end-1c").strip()
+            if isinstance(v, ctk.CTkTextbox)
+            else v.get()
             for k, v in self.entries.items()
         }
         if (
@@ -358,21 +372,10 @@ class GestionarExperienciaWindow(FormularioBase):
                 parent=self,
             )
             return
-        datos_db = {
-            "Empresa": datos["Empresa"],
-            "Cargo": datos["Cargo"],
-            "Fecha Inicio": datos["Fecha Inicio (YYYY-MM-DD)"],
-            "Fecha Fin": datos["Fecha Fin (YYYY-MM-DD, opcional)"],
-            "Descripcion": datos["Descripción"],
-        }
-
         self.controller.config(cursor="watch")
         self.controller.update_idletasks()
-        success, msg = db_manager.crear_experiencia_db(
-            self.controller.conexion, self.id_postulante, datos_db
-        )
+        success, msg = db_manager.crear_experiencia_db(self.id_postulante, datos)
         self.controller.config(cursor="")
-
         if success:
             self.populate_tree()
         else:
@@ -393,9 +396,7 @@ class GestionarExperienciaWindow(FormularioBase):
         ):
             self.controller.config(cursor="watch")
             self.controller.update_idletasks()
-            success, msg = db_manager.eliminar_experiencia_db(
-                self.controller.conexion, id_exp
-            )
+            success, msg = db_manager.eliminar_experiencia_db(id_exp)
             self.controller.config(cursor="")
             if success:
                 self.populate_tree()
@@ -407,52 +408,61 @@ class GestionCatalogoWindow(FormularioBase):
     def __init__(self, parent, controller, title, tabla, id_col, nombre_col, **kwargs):
         super().__init__(parent, controller, title)
         self.tabla, self.id_col, self.nombre_col = tabla, id_col, nombre_col
-        add_frame = tk.LabelFrame(
-            self,
-            text=f"Agregar Nuevo/a {title.split(' ')[-1]}",
-            bg=BG_COLOR,
-            fg=FG_COLOR,
-            padx=10,
-            pady=10,
-            font=FONT_BOLD,
-        )
+        add_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
         add_frame.pack(fill="x", pady=5)
-        tk.Label(
-            add_frame, text="Nombre:", bg=BG_COLOR, fg=FG_COLOR, font=FONT_NORMAL
-        ).pack(side=tk.LEFT, padx=5)
-        self.new_entry = tk.Entry(
-            add_frame,
-            width=40,
-            bg=ENTRY_BG,
-            fg=FG_COLOR,
-            relief=tk.FLAT,
-            font=FONT_NORMAL,
-            insertbackground=FG_COLOR,
-        )
-        self.new_entry.pack(side=tk.LEFT, padx=5, fill="x", expand=True, ipady=4)
-        ttk.Button(add_frame, text="Agregar", command=self.agregar).pack(
+        ctk.CTkLabel(
+            add_frame, text=f"Agregar Nuevo/a {title.split(' ')[-1]}", font=FONT_BOLD
+        ).pack(pady=(5, 10))
+        entry_frame = ctk.CTkFrame(add_frame, fg_color="transparent")
+        entry_frame.pack(fill="x", padx=10)
+        ctk.CTkLabel(entry_frame, text="Nombre:", font=FONT_NORMAL).pack(
             side=tk.LEFT, padx=5
         )
-        tree_frame = tk.Frame(self, bg=BG_COLOR)
-        tree_frame.pack(fill="both", expand=True, pady=5)
-        self.tree = crear_tabla(
-            tree_frame, ("ID", "Nombre"), widths={"ID": 50, "Nombre": 600}
+        self.new_entry = ctk.CTkEntry(
+            entry_frame,
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
+            text_color=TEXT_COLOR,
         )
-        self.tree.pack(fill="both", expand=True)
-        action_frame = tk.Frame(self, bg=BG_COLOR)
-        action_frame.pack(fill="x", pady=5, anchor="e")
-        ttk.Button(
-            action_frame, text="Eliminar", command=self.eliminar, style="Accent.TButton"
+        self.new_entry.pack(side=tk.LEFT, padx=5, fill="x", expand=True)
+        ctk.CTkButton(
+            entry_frame,
+            text="Agregar",
+            command=self.agregar,
+            width=80,
+            fg_color=BUTTON_SECONDARY_COLOR,
+            hover_color=BUTTON_SECONDARY_HOVER,
+        ).pack(side=tk.LEFT, padx=5)
+        tree_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
+        tree_frame.pack(fill="both", expand=True, pady=10)
+        self.tree = crear_tabla(
+            tree_frame, ("ID", "Nombre"), widths={"ID": 50, "Nombre": 400}
+        )
+        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
+        action_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        action_frame.pack(fill="x", pady=5, padx=10, anchor="e")
+        ctk.CTkButton(
+            action_frame,
+            text="Editar",
+            command=self.editar,
+            width=80,
+            fg_color=BUTTON_SECONDARY_COLOR,
+            hover_color=BUTTON_SECONDARY_HOVER,
         ).pack(side="right", padx=5)
-        ttk.Button(action_frame, text="Editar", command=self.editar).pack(side="right")
+        ctk.CTkButton(
+            action_frame,
+            text="Eliminar",
+            command=self.eliminar,
+            width=80,
+            fg_color=ACCENT_PINK,
+            hover_color=ACCENT_PURPLE,
+        ).pack(side="right")
         self.populate_tree()
 
     def populate_tree(self):
         for i in self.tree.get_children():
             self.tree.delete(i)
-        for item in db_manager.get_catalogo(
-            self.controller.conexion, self.tabla, self.id_col, self.nombre_col
-        ):
+        for item in db_manager.get_catalogo(self.tabla, self.id_col, self.nombre_col):
             self.tree.insert(
                 "", "end", values=(item[self.id_col], item[self.nombre_col])
             )
@@ -462,12 +472,9 @@ class GestionCatalogoWindow(FormularioBase):
         if not new_val:
             messagebox.showwarning("Campo Vacío", "Introduce un nombre.", parent=self)
             return
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         success, msg = db_manager.crear_item_catalogo(
-            self.controller.conexion, self.tabla, self.nombre_col, new_val
+            self.tabla, self.nombre_col, new_val
         )
-        self.controller.config(cursor="")
         if success:
             self.new_entry.delete(0, tk.END)
             self.populate_tree()
@@ -483,24 +490,12 @@ class GestionCatalogoWindow(FormularioBase):
             )
             return
         item_id, nombre_actual = self.tree.item(selected[0])["values"]
-        nuevo_nombre = simpledialog.askstring(
-            "Editar",
-            "Introduce el nuevo nombre:",
-            initialvalue=nombre_actual,
-            parent=self,
-        )
+        dialog = ctk.CTkInputDialog(text="Introduce el nuevo nombre:", title="Editar")
+        nuevo_nombre = dialog.get_input()
         if nuevo_nombre and nuevo_nombre.strip() and nuevo_nombre != nombre_actual:
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
             success, msg = db_manager.actualizar_item_catalogo(
-                self.controller.conexion,
-                self.tabla,
-                self.id_col,
-                self.nombre_col,
-                item_id,
-                nuevo_nombre,
+                self.tabla, self.id_col, self.nombre_col, item_id, nuevo_nombre
             )
-            self.controller.config(cursor="")
             if success:
                 self.populate_tree()
             messagebox.showinfo("Resultado", msg, parent=self)
@@ -518,12 +513,9 @@ class GestionCatalogoWindow(FormularioBase):
         if messagebox.askyesno(
             "Confirmar", f"¿Seguro que quieres eliminar '{nombre}'?", parent=self
         ):
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
             success, msg = db_manager.eliminar_item_catalogo(
-                self.controller.conexion, self.tabla, self.id_col, item_id
+                self.tabla, self.id_col, item_id
             )
-            self.controller.config(cursor="")
             if success:
                 self.populate_tree()
             messagebox.showinfo("Resultado", msg, parent=self)
@@ -534,22 +526,20 @@ class CrearVacanteWindow(FormularioBase):
         super().__init__(parent, controller, "Crear Nueva Vacante")
         self.on_success_callback = kwargs.get("on_success_callback")
         self.profesiones = db_manager.get_catalogo(
-            self.controller.conexion, "Profesiones", "ID_Profesion", "Nombre_Profesion"
+            "Profesiones", "ID_Profesion", "Nombre_Profesion"
         )
         self.prof_map = {
-            p["Nombre_Profesion"]: p["ID_Profesion"] for p in self.profesiones
+            p["Nombre_Profesion"]: p["ID_Profesion"] for p in self.profesiones or []
         }
         if not self.profesiones:
             messagebox.showwarning(
-                "Advertencia",
-                "No hay profesiones registradas. No se puede crear una vacante.",
-                parent=self,
+                "Advertencia", "No hay profesiones registradas.", parent=self
             )
             self.destroy()
             return
-        frame = tk.Frame(self, bg=BG_COLOR)
+        frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         self.crear_campo(frame, "Cargo Vacante")
-        self.crear_campo(frame, "Descripción del Perfil", tipo="scrolledtext")
+        self.crear_campo(frame, "Descripción del Perfil", "textbox")
         self.crear_campo(frame, "Salario Ofrecido")
         self.crear_campo(
             frame,
@@ -557,18 +547,22 @@ class CrearVacanteWindow(FormularioBase):
             tipo="combobox",
             values=list(self.prof_map.keys()),
         )
-        frame.pack(pady=10)
-        ttk.Button(
-            self, text="Guardar Vacante", command=self.guardar, style="Accent.TButton"
+        frame.pack(pady=10, fill="x")
+        ctk.CTkButton(
+            self.main_frame,
+            text="Guardar Vacante",
+            command=self.guardar,
+            height=40,
+            corner_radius=10,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
         ).pack(pady=15)
 
     def guardar(self):
         datos = {
-            k: (
-                v.get("1.0", "end-1c")
-                if isinstance(v, scrolledtext.ScrolledText)
-                else v.get()
-            )
+            k: v.get("1.0", "end-1c").strip()
+            if isinstance(v, ctk.CTkTextbox)
+            else v.get()
             for k, v in self.entries.items()
         }
         try:
@@ -582,26 +576,19 @@ class CrearVacanteWindow(FormularioBase):
                 parent=self,
             )
             return
-
         id_profesion = self.prof_map.get(datos.get("Profesión Requerida"))
         if not all([datos.get("Cargo Vacante"), id_profesion]):
             messagebox.showerror(
                 "Error", "Cargo y Profesión son obligatorios.", parent=self
             )
             return
-
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         success, message = db_manager.crear_vacante_db(
-            self.controller.conexion,
             self.controller.usuario_actual["ID_Usuario"],
             datos["Cargo Vacante"],
             datos["Descripción del Perfil"],
             salario,
             id_profesion,
         )
-        self.controller.config(cursor="")
-
         if success:
             messagebox.showinfo("Éxito", message, parent=self)
             if self.on_success_callback:
@@ -616,14 +603,14 @@ class ActualizarVacanteWindow(FormularioBase):
         super().__init__(parent, controller, "Editar Vacante")
         self.on_success_callback = kwargs.get("on_success_callback")
         self.id_vacante = datos_vacante["ID_Vacante"]
-        frame = tk.Frame(self, bg=BG_COLOR)
+        frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         self.crear_campo(frame, "Cargo Vacante")
-        self.crear_campo(frame, "Descripción del Perfil", tipo="scrolledtext")
+        self.crear_campo(frame, "Descripción del Perfil", "textbox")
         self.crear_campo(frame, "Salario Ofrecido")
         self.crear_campo(
             frame, "Estatus", tipo="combobox", values=["Activa", "Inactiva", "Cerrada"]
         )
-        frame.pack(pady=10)
+        frame.pack(pady=10, fill="x")
         self.entries["Cargo Vacante"].insert(0, datos_vacante["Cargo_Vacante"])
         self.entries["Descripción del Perfil"].insert(
             "1.0", datos_vacante["Descripcion_Perfil"]
@@ -632,17 +619,21 @@ class ActualizarVacanteWindow(FormularioBase):
             0, f"{float(datos_vacante['Salario_Ofrecido']):.2f}"
         )
         self.entries["Estatus"].set(datos_vacante["Estatus"])
-        ttk.Button(
-            self, text="Guardar Cambios", command=self.guardar, style="Accent.TButton"
+        ctk.CTkButton(
+            self.main_frame,
+            text="Guardar Cambios",
+            command=self.guardar,
+            height=40,
+            corner_radius=10,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
         ).pack(pady=15)
 
     def guardar(self):
         datos = {
-            k: (
-                v.get("1.0", "end-1c")
-                if isinstance(v, scrolledtext.ScrolledText)
-                else v.get()
-            )
+            k: v.get("1.0", "end-1c").strip()
+            if isinstance(v, ctk.CTkTextbox)
+            else v.get()
             for k, v in self.entries.items()
         }
         try:
@@ -661,19 +652,13 @@ class ActualizarVacanteWindow(FormularioBase):
                 "Error", "Todos los campos son obligatorios.", parent=self
             )
             return
-
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         success, message = db_manager.actualizar_vacante_db(
-            self.controller.conexion,
             self.id_vacante,
             datos["Cargo Vacante"],
             datos["Descripción del Perfil"],
             salario,
             datos["Estatus"],
         )
-        self.controller.config(cursor="")
-
         if success:
             messagebox.showinfo("Éxito", message, parent=self)
             if self.on_success_callback:
@@ -683,76 +668,44 @@ class ActualizarVacanteWindow(FormularioBase):
             messagebox.showerror("Error al Guardar", message, parent=self)
 
 
-class App(tk.Tk):
-    def __init__(self):
-        super().__init__()
+class App(ctk.CTk):
+    def __init__(self, is_first_run=False):
+        super().__init__(fg_color=APP_BG_COLOR)
         self.title("Sistema de Gestión Hiring Group")
-        self.geometry("950x700")
+        self.geometry("1100x700")
         self.minsize(800, 600)
-        self.configure(bg=BG_COLOR)
-        self.conexion = None
+        self.is_first_run = is_first_run
         self.usuario_actual = None
         self.rol_actual = None
         self.setup_styles()
-        self.container = tk.Frame(self, bg=BG_COLOR)
+        self.container = ctk.CTkFrame(self, fg_color="transparent")
         self.container.pack(side="top", fill="both", expand=True)
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
         self.show_frame(LoginFrame)
 
     def setup_styles(self):
-        style = ttk.Style(self)
-        style.theme_use("clam")
-        style.configure(
-            "TButton",
-            background=BUTTON_BG,
-            foreground=FG_COLOR,
-            borderwidth=0,
-            font=FONT_BOLD,
-            padding=10,
-        )
-        style.map(
-            "TButton",
-            background=[("active", ACCENT_ACTIVE)],
-            foreground=[("active", FG_COLOR)],
-        )
-        style.configure("Accent.TButton", background=ACCENT_COLOR, foreground=FG_COLOR)
-        style.map("Accent.TButton", background=[("active", ACCENT_ACTIVE)])
+        style = ttk.Style()
+        style.theme_use("default")
         style.configure(
             "Treeview",
-            background=ENTRY_BG,
-            foreground=FG_COLOR,
-            fieldbackground=ENTRY_BG,
+            background=ENTRY_BG_COLOR,
+            foreground=TEXT_COLOR,
+            fieldbackground=ENTRY_BG_COLOR,
             rowheight=25,
             font=FONT_NORMAL,
+            borderwidth=0,
         )
-        style.map(
-            "Treeview",
-            background=[("selected", ACCENT_COLOR)],
-            foreground=[("selected", FG_COLOR)],
-        )
+        style.map("Treeview", background=[("selected", ACCENT_PURPLE)])
         style.configure(
             "Treeview.Heading",
-            background=BUTTON_BG,
-            foreground=FG_COLOR,
+            background=FRAME_BG_COLOR,
+            foreground=TEXT_COLOR,
             font=FONT_BOLD,
             relief="flat",
             padding=5,
         )
-        style.map("Treeview.Heading", background=[("active", BUTTON_BG)])
-        style.configure(
-            "TCombobox",
-            fieldbackground=ENTRY_BG,
-            background=BUTTON_BG,
-            foreground=FG_COLOR,
-            arrowcolor=FG_COLOR,
-            selectbackground=ENTRY_BG,
-            selectforeground=FG_COLOR,
-        )
-        self.option_add("*TCombobox*Listbox.background", ENTRY_BG)
-        self.option_add("*TCombobox*Listbox.foreground", FG_COLOR)
-        self.option_add("*TCombobox*Listbox.selectBackground", ACCENT_COLOR)
-        self.option_add("*TCombobox*Listbox.font", FONT_NORMAL)
+        style.map("Treeview.Heading", background=[("active", BUTTON_SECONDARY_HOVER)])
 
     def show_frame(self, FrameClass):
         for widget in self.container.winfo_children():
@@ -761,97 +714,92 @@ class App(tk.Tk):
         frame.grid(row=0, column=0, sticky="nsew")
 
 
-class LoginFrame(tk.Frame):
+class LoginFrame(ctk.CTkFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg=BG_COLOR)
+        super().__init__(parent, fg_color="transparent")
         self.controller = controller
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
-        login_container = tk.Frame(self, bg=BG_COLOR)
+        login_container = ctk.CTkFrame(self, fg_color="transparent")
         login_container.grid(row=0, column=0)
-        tk.Label(
+        ctk.CTkLabel(
             login_container,
             text="Login del Sistema",
-            font=("Segoe UI", 20, "bold"),
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,
         ).pack(pady=20)
-        tk.Label(
-            login_container, text="Email", bg=BG_COLOR, fg=FG_COLOR, font=FONT_NORMAL
-        ).pack()
-        self.email_entry = tk.Entry(
+        ctk.CTkLabel(
+            login_container, text="Email", font=FONT_NORMAL, text_color=TEXT_COLOR
+        ).pack(anchor="w", padx=40)
+        self.email_entry = ctk.CTkEntry(
             login_container,
-            width=40,
-            bg=ENTRY_BG,
-            fg=FG_COLOR,
-            insertbackground=FG_COLOR,
-            relief=tk.FLAT,
-            font=FONT_NORMAL,
-            justify="center",
+            width=300,
+            height=35,
+            placeholder_text="correo@ejemplo.com",
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
+            text_color=TEXT_COLOR,
+            placeholder_text_color=TEXT_COLOR,
         )
-        self.email_entry.pack(pady=5, ipady=5)
+        self.email_entry.pack(pady=(0, 10))
         self.email_entry.focus()
-        tk.Label(
+        ctk.CTkLabel(
+            login_container, text="Contraseña", font=FONT_NORMAL, text_color=TEXT_COLOR
+        ).pack(anchor="w", padx=40)
+        self.pass_entry = ctk.CTkEntry(
             login_container,
-            text="Contraseña",
-            bg=BG_COLOR,
-            fg=FG_COLOR,
-            font=FONT_NORMAL,
-        ).pack()
-        self.pass_entry = tk.Entry(
-            login_container,
-            width=40,
+            width=300,
+            height=35,
             show="*",
-            bg=ENTRY_BG,
-            fg=FG_COLOR,
-            insertbackground=FG_COLOR,
-            relief=tk.FLAT,
-            font=FONT_NORMAL,
-            justify="center",
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
+            text_color=TEXT_COLOR,
         )
-        self.pass_entry.pack(pady=5, ipady=5)
+        self.pass_entry.pack()
         self.pass_entry.bind("<Return>", self.attempt_login)
-        ttk.Button(
+        ctk.CTkButton(
             login_container,
             text="Ingresar",
             command=self.attempt_login,
-            style="Accent.TButton",
-        ).pack(pady=20, ipady=5, ipadx=10)
+            height=40,
+            corner_radius=10,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
+        ).pack(pady=20, ipady=5)
+        if self.controller.is_first_run:
+            ctk.CTkButton(
+                login_container,
+                text="Crear Primer Usuario (Admin)",
+                command=self.crear_primer_usuario,
+                height=35,
+                corner_radius=10,
+                fg_color=BUTTON_SECONDARY_COLOR,
+                hover_color=BUTTON_SECONDARY_HOVER,
+            ).pack(pady=10)
+
+    def crear_primer_usuario(self):
+        CrearUsuarioWindow(
+            self.controller,
+            self.controller,
+            is_first_user=True,
+            on_success_callback=self.refresh_login,
+        )
+
+    def refresh_login(self):
+        self.controller.is_first_run = False
+        self.controller.show_frame(LoginFrame)
 
     def attempt_login(self, event=None):
-        if not self.controller.conexion or not self.controller.conexion.is_connected():
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
-            self.controller.conexion = db_manager.conectar_db(password="")
-            self.controller.config(cursor="")
-            if not self.controller.conexion:
-                password_db = simpledialog.askstring(
-                    "Contraseña DB",
-                    "La conexión automática falló. Introduce la contraseña de tu BD (MySQL):",
-                    show="*",
-                )
-                if password_db is None:
-                    return
-                self.controller.config(cursor="watch")
-                self.controller.update_idletasks()
-                self.controller.conexion = db_manager.conectar_db(password=password_db)
-                self.controller.config(cursor="")
-                if not self.controller.conexion:
-                    messagebox.showerror(
-                        "Error de Conexión",
-                        "No se pudo conectar. Verifica que el servidor (XAMPP) esté activo y la contraseña sea correcta.",
-                    )
-                    return
-
-        email = self.email_entry.get()
-        password = self.pass_entry.get()
+        email, password = self.email_entry.get(), self.pass_entry.get()
+        if not email or not password:
+            messagebox.showwarning(
+                "Campos Vacíos", "Por favor, ingrese email y contraseña."
+            )
+            return
         self.controller.config(cursor="watch")
         self.controller.update_idletasks()
-        usuario, rol = db_manager.login_usuario(
-            self.controller.conexion, email, password
-        )
+        usuario, rol = db_manager.login_usuario(email, password)
         self.controller.config(cursor="")
-
         if usuario:
             self.controller.usuario_actual, self.controller.rol_actual = usuario, rol
             self.controller.show_frame(MainFrame)
@@ -861,24 +809,26 @@ class LoginFrame(tk.Frame):
             )
 
 
-class MainFrame(tk.Frame):
+class MainFrame(ctk.CTkFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg=BG_COLOR)
+        super().__init__(parent, fg_color="transparent")
         self.controller = controller
-        menu_frame = tk.Frame(self, bg="#0F172A", width=220)
-        menu_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(10, 0), pady=10)
-        menu_frame.pack_propagate(False)
-        self.content_frame = tk.Frame(self, bg=BG_COLOR)
-        self.content_frame.pack(
-            side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        menu_frame = ctk.CTkFrame(
+            self, width=220, corner_radius=0, fg_color=FRAME_BG_COLOR
         )
+        menu_frame.grid(row=0, column=0, sticky="nsw")
+        self.content_frame = ctk.CTkScrollableFrame(
+            self, corner_radius=0, fg_color="transparent"
+        )
+        self.content_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
         rol = self.controller.rol_actual
-        tk.Label(
+        ctk.CTkLabel(
             menu_frame,
             text=f"Menú - {rol}",
             font=FONT_MENU_TITLE,
-            bg="#0F172A",
-            fg=FG_COLOR,
+            text_color=TEXT_COLOR,
         ).pack(pady=20)
         botones = {
             "HiringGroup": [
@@ -925,25 +875,36 @@ class MainFrame(tk.Frame):
             ],
         }
         for texto, comando in botones.get(rol, []):
-            ttk.Button(menu_frame, text=texto, command=comando).pack(
-                fill=tk.X, pady=4, padx=10
-            )
-        ttk.Button(
+            ctk.CTkButton(
+                menu_frame,
+                text=texto,
+                command=comando,
+                height=35,
+                corner_radius=8,
+                fg_color=BUTTON_SECONDARY_COLOR,
+                hover_color=BUTTON_SECONDARY_HOVER,
+            ).pack(pady=4, padx=20, fill="x")
+        ctk.CTkButton(
             menu_frame,
             text="Salir (Logout)",
             command=self.logout,
-            style="Accent.TButton",
-        ).pack(side=tk.BOTTOM, fill=tk.X, pady=20, padx=10)
+            height=35,
+            corner_radius=8,
+            fg_color=ACCENT_PINK,
+            hover_color=ACCENT_PURPLE,
+        ).pack(side="bottom", pady=20, padx=20, fill="x")
         self.show_welcome_message()
+
+    def open_form_window(self, WindowClass, *args, **kwargs):
+        WindowClass(self.controller, self.controller, *args, **kwargs)
 
     def show_welcome_message(self):
         self.clear_content_frame()
-        tk.Label(
+        ctk.CTkLabel(
             self.content_frame,
             text=f"Bienvenido/a, {self.controller.usuario_actual['Email']}",
             font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+            text_color=TEXT_COLOR,
         ).pack(anchor="w", pady=(0, 10))
 
     def clear_content_frame(self):
@@ -954,38 +915,30 @@ class MainFrame(tk.Frame):
         self.controller.usuario_actual, self.controller.rol_actual = None, None
         self.controller.show_frame(LoginFrame)
 
-    def open_form_window(self, WindowClass, *args, **kwargs):
-        WindowClass(self.controller, self.controller, *args, **kwargs)
-
     def show_gestionar_empresas(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Gestionar Empresas",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Gestionar Empresas", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         empresas = db_manager.get_catalogo(
-            self.controller.conexion,
             "Empresas",
             "ID_Empresa",
-            "Nombre_Empresa, RIF, Sector_Industrial, Persona_Contacto, Telefono_Contacto, Email_Contacto",
+            [
+                "Nombre_Empresa",
+                "RIF",
+                "Sector_Industrial",
+                "Persona_Contacto",
+                "Telefono_Contacto",
+                "Email_Contacto",
+            ],
         )
-        self.controller.config(cursor="")
         if not empresas:
-            tk.Label(
-                self.content_frame,
-                text="No hay empresas registradas.",
-                bg=BG_COLOR,
-                fg=FG_COLOR,
-                font=FONT_NORMAL,
-            ).pack()
+            ctk.CTkLabel(self.content_frame, text="No hay empresas registradas.").pack()
             return
+        tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        tree_frame.pack(fill="both", expand=True, pady=5)
         tree = crear_tabla(
-            self.content_frame,
+            tree_frame,
             ("ID", "Nombre", "RIF", "Sector", "Contacto", "Teléfono", "Email"),
             widths={"ID": 40, "Nombre": 150, "RIF": 80},
         )
@@ -1003,16 +956,12 @@ class MainFrame(tk.Frame):
                     e["Email_Contacto"],
                 ),
             )
-        tree.pack(fill="both", expand=True, pady=5)
+        tree.pack(fill="both", expand=True)
 
     def show_menu_catalogos(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Gestionar Catálogos",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Gestionar Catálogos", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
         catalogos = {
             "Áreas de Conocimiento": (
@@ -1025,7 +974,7 @@ class MainFrame(tk.Frame):
             "Bancos": ("Bancos", "ID_Banco", "Nombre_Banco"),
         }
         for title, args in catalogos.items():
-            ttk.Button(
+            ctk.CTkButton(
                 self.content_frame,
                 text=f"Gestionar {title}",
                 command=lambda t=title, a=args: self.open_form_window(
@@ -1035,36 +984,26 @@ class MainFrame(tk.Frame):
                     id_col=a[1],
                     nombre_col=a[2],
                 ),
+                fg_color=BUTTON_SECONDARY_COLOR,
+                hover_color=BUTTON_SECONDARY_HOVER,
+                corner_radius=8,
             ).pack(fill="x", padx=20, pady=5)
 
     def show_contratar_form(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Contratar Postulante",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Contratar Postulante", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
-        postulaciones = db_manager.get_postulaciones_para_contratar(
-            self.controller.conexion
-        )
-        bancos = db_manager.get_catalogo(
-            self.controller.conexion, "Bancos", "ID_Banco", "Nombre_Banco"
-        )
-        self.controller.config(cursor="")
+        postulaciones = db_manager.get_postulaciones_para_contratar()
+        bancos = db_manager.get_catalogo("Bancos", "ID_Banco", "Nombre_Banco")
         if not postulaciones:
-            tk.Label(
-                self.content_frame,
-                text="No hay postulaciones recibidas.",
-                bg=BG_COLOR,
-                fg=FG_COLOR,
-                font=FONT_NORMAL,
+            ctk.CTkLabel(
+                self.content_frame, text="No hay postulaciones recibidas."
             ).pack()
             return
-        tree = crear_tabla(self.content_frame, ("ID", "Nombre", "Cargo"))
+        tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        tree_frame.pack(fill="x", expand=True, pady=5)
+        tree = crear_tabla(tree_frame, ("ID", "Nombre", "Cargo"))
         for p in postulaciones:
             tree.insert(
                 "",
@@ -1075,10 +1014,11 @@ class MainFrame(tk.Frame):
                     p["Cargo_Vacante"],
                 ),
             )
-        tree.pack(fill="x", pady=5)
-        form_frame = tk.Frame(self.content_frame, pady=10, bg=BG_COLOR)
+        tree.pack(fill="x")
+        form_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        form_frame.pack(anchor="w", fill="x", pady=(10, 0))
         entries = {}
-        bancos_map = {b["Nombre_Banco"]: b["ID_Banco"] for b in bancos}
+        bancos_map = {b["Nombre_Banco"]: b["ID_Banco"] for b in bancos or []}
         fields = [
             ("Salario", "entry"),
             ("Tipo Contrato", "combo_contrato"),
@@ -1089,32 +1029,34 @@ class MainFrame(tk.Frame):
             ("Banco", "combo_banco"),
         ]
         for i, (label_text, widget_type) in enumerate(fields):
-            tk.Label(
-                form_frame,
-                text=f"{label_text}:",
-                bg=BG_COLOR,
-                fg=FG_COLOR,
-                font=FONT_NORMAL,
-            ).grid(row=i, column=0, padx=5, pady=5, sticky="w")
+            label = ctk.CTkLabel(form_frame, text=f"{label_text}:", font=FONT_NORMAL)
+            label.grid(row=i, column=0, padx=5, pady=8, sticky="w")
             widget = None
             if widget_type == "entry":
-                widget = tk.Entry(
-                    form_frame, bg=ENTRY_BG, fg=FG_COLOR, insertbackground=FG_COLOR
+                widget = ctk.CTkEntry(
+                    form_frame,
+                    width=250,
+                    text_color=TEXT_COLOR,
+                    fg_color=ENTRY_BG_COLOR,
+                    border_color=BUTTON_SECONDARY_COLOR,
                 )
             elif widget_type == "combo_contrato":
-                widget = ttk.Combobox(
+                widget = ctk.CTkComboBox(
                     form_frame,
+                    width=250,
                     values=["Un mes", "Seis meses", "Un año", "Indefinido"],
                     state="readonly",
                 )
             elif widget_type == "combo_banco":
-                widget = ttk.Combobox(
-                    form_frame, values=list(bancos_map.keys()), state="readonly"
+                widget = ctk.CTkComboBox(
+                    form_frame,
+                    width=250,
+                    values=list(bancos_map.keys()),
+                    state="readonly",
                 )
             if widget:
-                widget.grid(row=i, column=1, padx=5, pady=5, sticky="we", ipady=4)
+                widget.grid(row=i, column=1, padx=5, pady=8, sticky="ew")
                 entries[label_text] = widget
-        form_frame.pack(anchor="w")
 
         def contratar():
             selected = tree.selection()
@@ -1133,7 +1075,6 @@ class MainFrame(tk.Frame):
                 )
                 return
             id_postulacion = tree.item(selected[0])["values"][0]
-
             datos_contrato = {
                 "Salario_Acordado": salario_val,
                 "Tipo_Contrato": entries["Tipo Contrato"].get(),
@@ -1147,91 +1088,84 @@ class MainFrame(tk.Frame):
                 "Numero_Cuenta": entries["Número de Cuenta"].get(),
                 "ID_Banco": bancos_map.get(entries["Banco"].get()),
             }
-
             if not all(
                 v is not None if k == "ID_Banco" else v
                 for k, v in datos_contrato.items()
             ):
                 messagebox.showerror("Error", "Todos los campos son obligatorios.")
                 return
-
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
             success, msg = db_manager.contratar_postulante_db(
-                self.controller.conexion, id_postulacion, datos_contrato
+                id_postulacion, datos_contrato
             )
-            self.controller.config(cursor="")
             if success:
                 messagebox.showinfo("Resultado", msg)
                 self.show_contratar_form()
             else:
                 messagebox.showerror("Error", msg)
 
-        ttk.Button(
+        ctk.CTkButton(
             self.content_frame,
             text="Contratar y Aceptar",
             command=contratar,
-            style="Accent.TButton",
-        ).pack(pady=10, anchor="w")
+            height=40,
+            corner_radius=10,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
+        ).pack(pady=20, anchor="w")
 
     def show_buscar_vacantes(self, read_only=False):
         self.show_welcome_message()
         title = "Vacantes Disponibles" if not read_only else "Visualizar Vacantes"
-        tk.Label(
-            self.content_frame, text=title, font=FONT_TITLE, bg=BG_COLOR, fg=FG_COLOR
-        ).pack(pady=10, anchor="w")
-        filter_frame = tk.Frame(self.content_frame, bg=BG_COLOR)
+        ctk.CTkLabel(self.content_frame, text=title, font=FONT_TITLE).pack(
+            pady=10, anchor="w"
+        )
+        filter_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         filter_frame.pack(fill="x", pady=5)
         areas = db_manager.get_catalogo(
-            self.controller.conexion,
-            "Areas_Conocimiento",
-            "ID_Area_Conocimiento",
-            "Nombre_Area",
+            "Areas_Conocimiento", "ID_Area_Conocimiento", "Nombre_Area"
         )
         area_map = {"Todas": None}
-        area_map.update({a["Nombre_Area"]: a["ID_Area_Conocimiento"] for a in areas})
-        tk.Label(filter_frame, text="Área:", bg=BG_COLOR, fg=FG_COLOR).pack(
-            side=tk.LEFT, padx=5
+        area_map.update(
+            {a["Nombre_Area"]: a["ID_Area_Conocimiento"] for a in areas or []}
         )
-        area_combo = ttk.Combobox(
-            filter_frame, values=list(area_map.keys()), state="readonly", width=20
+        ctk.CTkLabel(filter_frame, text="Área:", font=FONT_NORMAL).pack(
+            side=tk.LEFT, padx=(0, 5)
+        )
+        area_combo = ctk.CTkComboBox(
+            filter_frame, values=list(area_map.keys()), state="readonly", width=180
         )
         area_combo.pack(side=tk.LEFT, padx=5)
         area_combo.set("Todas")
-        tk.Label(filter_frame, text="Salario:", bg=BG_COLOR, fg=FG_COLOR).pack(
-            side=tk.LEFT, padx=5
+        ctk.CTkLabel(filter_frame, text="Salario:", font=FONT_NORMAL).pack(
+            side=tk.LEFT, padx=(10, 5)
         )
-        salary_combo = ttk.Combobox(
+        salary_combo = ctk.CTkComboBox(
             filter_frame,
             values=["Sin Orden", "Mayor a Menor", "Menor a Mayor"],
             state="readonly",
-            width=15,
+            width=150,
         )
         salary_combo.pack(side=tk.LEFT, padx=5)
         salary_combo.set("Sin Orden")
+        tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        tree_frame.pack(fill="both", expand=True, pady=10)
         tree = crear_tabla(
-            self.content_frame,
+            tree_frame,
             ("ID", "Cargo", "Empresa", "Área", "Profesión", "Salario"),
             widths={"ID": 40, "Salario": 80},
         )
-        tree.pack(fill="both", expand=True, pady=5)
+        tree.pack(fill="both", expand=True)
 
         def populate_tree():
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
             for i in tree.get_children():
                 tree.delete(i)
             filtro_area = area_map[area_combo.get()]
             sort_map = {"Mayor a Menor": "DESC", "Menor a Mayor": "ASC"}
             sort_salary = sort_map.get(salary_combo.get())
             vacantes = db_manager.get_active_vacantes(
-                self.controller.conexion,
-                filtro_area=filtro_area,
-                sort_salary=sort_salary,
+                filtro_area=filtro_area, sort_salary=sort_salary
             )
-            self.controller.config(cursor="")
-            for v in vacantes:
-                area_nombre = v["Nombre_Area"] or "No Asignada"
+            for v in vacantes or []:
                 tree.insert(
                     "",
                     "end",
@@ -1239,21 +1173,30 @@ class MainFrame(tk.Frame):
                         v["ID_Vacante"],
                         v["Cargo_Vacante"],
                         v["Nombre_Empresa"],
-                        area_nombre,
+                        v["Nombre_Area"] or "No Asignada",
                         v["Nombre_Profesion"],
                         f"{float(v['Salario_Ofrecido']):.2f}",
                     ),
                 )
 
-        ttk.Button(filter_frame, text="Filtrar", command=populate_tree).pack(
-            side=tk.LEFT, padx=10
-        )
+        ctk.CTkButton(
+            filter_frame,
+            text="Filtrar",
+            command=populate_tree,
+            width=80,
+            corner_radius=8,
+            fg_color=BUTTON_SECONDARY_COLOR,
+            hover_color=BUTTON_SECONDARY_HOVER,
+        ).pack(side=tk.LEFT, padx=10)
         if not read_only:
-            ttk.Button(
+            ctk.CTkButton(
                 self.content_frame,
                 text="Aplicar a Vacante",
                 command=lambda: self.aplicar(tree),
-                style="Accent.TButton",
+                height=40,
+                corner_radius=10,
+                fg_color=ACCENT_PURPLE,
+                hover_color=ACCENT_PINK,
             ).pack(pady=10, anchor="e")
         populate_tree()
 
@@ -1265,56 +1208,52 @@ class MainFrame(tk.Frame):
             )
             return
         id_vacante = tree.item(selected[0])["values"][0]
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         success, msg = db_manager.aplicar_a_vacante_db(
-            self.controller.conexion,
-            self.controller.usuario_actual["ID_Usuario"],
-            id_vacante,
+            self.controller.usuario_actual["ID_Usuario"], id_vacante
         )
-        self.controller.config(cursor="")
         messagebox.showinfo("Resultado", msg)
 
     def show_recibos_pago(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Mis Recibos de Pago",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Mis Recibos de Pago", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        filter_frame = tk.Frame(self.content_frame, bg=BG_COLOR)
+        filter_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         filter_frame.pack(fill="x", pady=5)
-        tk.Label(filter_frame, text="Mes (opc):", bg=BG_COLOR, fg=FG_COLOR).pack(
-            side=tk.LEFT, padx=5
+        ctk.CTkLabel(filter_frame, text="Mes (opc):").pack(side=tk.LEFT, padx=5)
+        mes_entry = ctk.CTkEntry(
+            filter_frame,
+            width=50,
+            text_color=TEXT_COLOR,
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
         )
-        mes_entry = tk.Entry(filter_frame, width=5, bg=ENTRY_BG, fg=FG_COLOR)
         mes_entry.pack(side=tk.LEFT, padx=5)
-        tk.Label(filter_frame, text="Año (opc):", bg=BG_COLOR, fg=FG_COLOR).pack(
-            side=tk.LEFT, padx=5
+        ctk.CTkLabel(filter_frame, text="Año (opc):").pack(side=tk.LEFT, padx=5)
+        anio_entry = ctk.CTkEntry(
+            filter_frame,
+            width=70,
+            text_color=TEXT_COLOR,
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
         )
-        anio_entry = tk.Entry(filter_frame, width=7, bg=ENTRY_BG, fg=FG_COLOR)
         anio_entry.pack(side=tk.LEFT, padx=5)
+        tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        tree_frame.pack(fill="both", expand=True, pady=10)
         tree = crear_tabla(
-            self.content_frame,
-            ("Periodo", "Fecha Pago", "Salario Base", "Salario Neto"),
+            tree_frame, ("Periodo", "Fecha Pago", "Salario Base", "Salario Neto")
         )
-        tree.pack(fill="both", expand=True, pady=5)
+        tree.pack(fill="both", expand=True)
 
         def populate_recibos():
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
             for i in tree.get_children():
                 tree.delete(i)
             recibos = db_manager.get_recibos_por_contratado(
-                self.controller.conexion,
                 self.controller.usuario_actual["ID_Usuario"],
                 mes_entry.get() or None,
                 anio_entry.get() or None,
             )
-            self.controller.config(cursor="")
-            for r in recibos:
+            for r in recibos or []:
                 tree.insert(
                     "",
                     "end",
@@ -1326,37 +1265,34 @@ class MainFrame(tk.Frame):
                     ),
                 )
 
-        ttk.Button(filter_frame, text="Filtrar", command=populate_recibos).pack(
-            side=tk.LEFT, padx=10
-        )
+        ctk.CTkButton(
+            filter_frame,
+            text="Filtrar",
+            command=populate_recibos,
+            width=80,
+            corner_radius=8,
+            fg_color=BUTTON_SECONDARY_COLOR,
+            hover_color=BUTTON_SECONDARY_HOVER,
+        ).pack(side=tk.LEFT, padx=10)
         populate_recibos()
 
     def show_mis_vacantes(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Mis Vacantes Publicadas",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Mis Vacantes Publicadas", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         vacantes = db_manager.get_vacantes_por_empresa(
-            self.controller.conexion, self.controller.usuario_actual["ID_Usuario"]
+            self.controller.usuario_actual["ID_Usuario"]
         )
-        self.controller.config(cursor="")
         if not vacantes:
-            tk.Label(
-                self.content_frame,
-                text="No tienes vacantes publicadas.",
-                bg=BG_COLOR,
-                fg=FG_COLOR,
-                font=FONT_NORMAL,
+            ctk.CTkLabel(
+                self.content_frame, text="No tienes vacantes publicadas."
             ).pack()
             return
+        tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        tree_frame.pack(fill="both", expand=True, pady=10)
         tree = crear_tabla(
-            self.content_frame,
+            tree_frame,
             ("ID", "Cargo", "Salario", "Estatus"),
             widths={"ID": 50, "Estatus": 80},
         )
@@ -1371,8 +1307,8 @@ class MainFrame(tk.Frame):
                 "end",
                 values=(v["ID_Vacante"], v["Cargo_Vacante"], salario, v["Estatus"]),
             )
-        tree.pack(fill="both", expand=True, pady=5)
-        buttons_frame = tk.Frame(self.content_frame, bg=BG_COLOR)
+        tree.pack(fill="both", expand=True)
+        buttons_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         buttons_frame.pack(fill="x", pady=5, anchor="e")
 
         def editar_vacante():
@@ -1410,76 +1346,77 @@ class MainFrame(tk.Frame):
                 f"¿Estás seguro de que quieres eliminar la vacante '{cargo}'?",
                 parent=self.controller,
             ):
-                self.controller.config(cursor="watch")
-                self.controller.update_idletasks()
-                success, msg = db_manager.eliminar_vacante_db(
-                    self.controller.conexion, id_vacante
-                )
-                self.controller.config(cursor="")
+                success, msg = db_manager.eliminar_vacante_db(id_vacante)
                 if success:
                     messagebox.showinfo("Resultado", msg, parent=self.controller)
                     self.show_mis_vacantes()
+                else:
+                    messagebox.showerror("Error", msg, parent=self.controller)
 
-        ttk.Button(
+        ctk.CTkButton(
+            buttons_frame,
+            text="Editar Vacante",
+            command=editar_vacante,
+            fg_color=BUTTON_SECONDARY_COLOR,
+            hover_color=BUTTON_SECONDARY_HOVER,
+        ).pack(side="right", padx=10)
+        ctk.CTkButton(
             buttons_frame,
             text="Eliminar Vacante",
             command=eliminar_vacante,
-            style="Accent.TButton",
-        ).pack(side="right", padx=5)
-        ttk.Button(buttons_frame, text="Editar Vacante", command=editar_vacante).pack(
-            side="right"
-        )
+            fg_color=ACCENT_PINK,
+            hover_color=ACCENT_PURPLE,
+        ).pack(side="right")
 
     def show_reportes_nomina(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Reportes de Nómina",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Reportes de Nómina", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        rep1_frame = tk.LabelFrame(
-            self.content_frame,
-            text="Nómina por Empresa",
-            bg=BG_COLOR,
-            fg=FG_COLOR,
-            padx=10,
-            pady=10,
-            font=FONT_BOLD,
-        )
+        rep1_frame = ctk.CTkFrame(self.content_frame, fg_color=FRAME_BG_COLOR)
         rep1_frame.pack(fill="x", pady=5)
-        empresas = db_manager.get_catalogo(
-            self.controller.conexion, "Empresas", "ID_Empresa", "Nombre_Empresa"
+        ctk.CTkLabel(rep1_frame, text="Nómina por Empresa", font=FONT_BOLD).pack(
+            pady=10
         )
-        empresa_map = {e["Nombre_Empresa"]: e["ID_Empresa"] for e in empresas}
-        tk.Label(rep1_frame, text="Empresa:", bg=BG_COLOR, fg=FG_COLOR).grid(
-            row=0, column=0, padx=5
+        empresas = db_manager.get_catalogo("Empresas", "ID_Empresa", "Nombre_Empresa")
+        empresa_map = {e["Nombre_Empresa"]: e["ID_Empresa"] for e in empresas or []}
+        filter_controls = ctk.CTkFrame(rep1_frame, fg_color="transparent")
+        filter_controls.pack(fill="x", padx=10)
+        ctk.CTkLabel(filter_controls, text="Empresa:").pack(side=tk.LEFT)
+        empresa_combo = ctk.CTkComboBox(
+            filter_controls,
+            values=list(empresa_map.keys()),
+            state="readonly",
+            width=200,
         )
-        empresa_combo = ttk.Combobox(
-            rep1_frame, values=list(empresa_map.keys()), state="readonly"
+        empresa_combo.pack(side=tk.LEFT, padx=5)
+        ctk.CTkLabel(filter_controls, text="Mes:").pack(side=tk.LEFT)
+        mes_entry = ctk.CTkEntry(
+            filter_controls,
+            width=50,
+            text_color=TEXT_COLOR,
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
         )
-        empresa_combo.grid(row=0, column=1, padx=5)
-        tk.Label(rep1_frame, text="Mes:", bg=BG_COLOR, fg=FG_COLOR).grid(
-            row=0, column=2, padx=5
+        mes_entry.pack(side=tk.LEFT, padx=5)
+        ctk.CTkLabel(filter_controls, text="Año:").pack(side=tk.LEFT)
+        anio_entry = ctk.CTkEntry(
+            filter_controls,
+            width=70,
+            text_color=TEXT_COLOR,
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
         )
-        mes_entry = tk.Entry(rep1_frame, width=5, bg=ENTRY_BG, fg=FG_COLOR)
-        mes_entry.grid(row=0, column=3, padx=5)
-        tk.Label(rep1_frame, text="Año:", bg=BG_COLOR, fg=FG_COLOR).grid(
-            row=0, column=4, padx=5
-        )
-        anio_entry = tk.Entry(rep1_frame, width=7, bg=ENTRY_BG, fg=FG_COLOR)
-        anio_entry.grid(row=0, column=5, padx=5)
-        tree1 = crear_tabla(rep1_frame, ("Empleado", "Cédula", "Salario Base"))
-        tree1.grid(row=1, column=0, columnspan=7, sticky="we", pady=10)
+        anio_entry.pack(side=tk.LEFT, padx=5)
+        tree1_frame = ctk.CTkFrame(rep1_frame, fg_color="transparent")
+        tree1_frame.pack(fill="both", expand=True, pady=10, padx=10)
+        tree1 = crear_tabla(tree1_frame, ("Empleado", "Cédula", "Salario Base"))
+        tree1.pack(fill="both", expand=True)
 
         def buscar_nomina():
             id_empresa = empresa_map.get(empresa_combo.get())
             try:
-                mes = int(mes_entry.get())
-                anio = int(anio_entry.get())
-                if not (1 <= mes <= 12 and 2000 <= anio <= 2100):
-                    raise ValueError
+                mes, anio = int(mes_entry.get()), int(anio_entry.get())
             except (ValueError, TypeError):
                 messagebox.showerror(
                     "Entrada no válida",
@@ -1489,15 +1426,10 @@ class MainFrame(tk.Frame):
             if not id_empresa:
                 messagebox.showerror("Error", "Debes seleccionar una empresa")
                 return
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
             for i in tree1.get_children():
                 tree1.delete(i)
-            reporte = db_manager.get_nomina_reporte_db(
-                self.controller.conexion, id_empresa, mes, anio
-            )
-            self.controller.config(cursor="")
-            for row in reporte:
+            reporte = db_manager.get_nomina_reporte_db(id_empresa, mes, anio)
+            for row in reporte or []:
                 tree1.insert(
                     "",
                     "end",
@@ -1508,26 +1440,20 @@ class MainFrame(tk.Frame):
                     ),
                 )
 
-        ttk.Button(rep1_frame, text="Buscar", command=buscar_nomina).grid(
-            row=0, column=6, padx=10
-        )
-        rep2_frame = tk.LabelFrame(
-            self.content_frame,
-            text="Nómina General por Empresa",
-            bg=BG_COLOR,
-            fg=FG_COLOR,
-            padx=10,
-            pady=10,
-            font=FONT_BOLD,
-        )
-        rep2_frame.pack(fill="x", pady=5, expand=True)
-        tree2 = crear_tabla(rep2_frame, ("Empresa", "Periodo", "Total Nómina"))
-        tree2.pack(fill="both", expand=True, pady=5)
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
-        reporte_total = db_manager.get_toda_nomina_reporte_db(self.controller.conexion)
-        self.controller.config(cursor="")
-        for row in reporte_total:
+        ctk.CTkButton(
+            filter_controls, text="Buscar", command=buscar_nomina, width=80
+        ).pack(side=tk.LEFT, padx=10)
+        rep2_frame = ctk.CTkFrame(self.content_frame, fg_color=FRAME_BG_COLOR)
+        rep2_frame.pack(fill="both", pady=10, expand=True)
+        ctk.CTkLabel(
+            rep2_frame, text="Nómina General por Empresa", font=FONT_BOLD
+        ).pack(pady=10)
+        tree2_frame = ctk.CTkFrame(rep2_frame, fg_color="transparent")
+        tree2_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        tree2 = crear_tabla(tree2_frame, ("Empresa", "Periodo", "Total Nómina"))
+        tree2.pack(fill="both", expand=True)
+        reporte_total = db_manager.get_toda_nomina_reporte_db()
+        for row in reporte_total or []:
             tree2.insert(
                 "",
                 "end",
@@ -1540,72 +1466,69 @@ class MainFrame(tk.Frame):
 
     def show_nomina_form(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Ejecutar Nómina Mensual",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Ejecutar Nómina Mensual", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        empresas = db_manager.get_catalogo(
-            self.controller.conexion, "Empresas", "ID_Empresa", "Nombre_Empresa"
-        )
+        form_container = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        form_container.pack(fill="x", pady=5, anchor="w")
+        empresas = db_manager.get_catalogo("Empresas", "ID_Empresa", "Nombre_Empresa")
         if not empresas:
-            tk.Label(
-                self.content_frame,
-                text="No hay empresas registradas.",
-                bg=BG_COLOR,
-                fg=FG_COLOR,
-                font=FONT_NORMAL,
-            ).pack()
+            ctk.CTkLabel(self.content_frame, text="No hay empresas registradas.").pack()
             return
-        form_frame = tk.Frame(self.content_frame, pady=10, bg=BG_COLOR)
-        empresa_map = {e["Nombre_Empresa"]: e["ID_Empresa"] for e in empresas}
-        tk.Label(
-            form_frame, text="Empresa:", bg=BG_COLOR, fg=FG_COLOR, font=FONT_NORMAL
-        ).grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        empresa_combo = ttk.Combobox(
-            form_frame,
-            values=list(empresa_map.keys()),
-            state="readonly",
-            width=30,
-            font=FONT_NORMAL,
+        empresa_map = {e["Nombre_Empresa"]: e["ID_Empresa"] for e in empresas or []}
+        ctk.CTkLabel(form_container, text="Empresa:").pack(anchor="w")
+        empresa_combo = ctk.CTkComboBox(
+            form_container, values=list(empresa_map.keys()), state="readonly", width=300
         )
-        empresa_combo.grid(row=0, column=1, padx=5, pady=5)
-        tk.Label(
-            form_frame, text="Mes (1-12):", bg=BG_COLOR, fg=FG_COLOR, font=FONT_NORMAL
-        ).grid(row=1, column=0, padx=5, pady=5, sticky="w")
-        mes_entry = tk.Entry(
-            form_frame,
-            bg=ENTRY_BG,
-            fg=FG_COLOR,
-            relief=tk.FLAT,
-            font=FONT_NORMAL,
-            insertbackground=FG_COLOR,
+        empresa_combo.pack(fill="x")
+        ctk.CTkLabel(form_container, text="Mes (1-12):").pack(anchor="w", pady=(10, 0))
+        mes_entry = ctk.CTkEntry(
+            form_container,
+            width=300,
+            text_color=TEXT_COLOR,
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
         )
-        mes_entry.grid(row=1, column=1, padx=5, pady=5, ipady=4)
-        tk.Label(
-            form_frame, text="Año (YYYY):", bg=BG_COLOR, fg=FG_COLOR, font=FONT_NORMAL
-        ).grid(row=2, column=0, padx=5, pady=5, sticky="w")
-        anio_entry = tk.Entry(
-            form_frame,
-            bg=ENTRY_BG,
-            fg=FG_COLOR,
-            relief=tk.FLAT,
-            font=FONT_NORMAL,
-            insertbackground=FG_COLOR,
+        mes_entry.pack(fill="x")
+        ctk.CTkLabel(form_container, text="Año (YYYY):").pack(anchor="w", pady=(10, 0))
+        anio_entry = ctk.CTkEntry(
+            form_container,
+            width=300,
+            text_color=TEXT_COLOR,
+            fg_color=ENTRY_BG_COLOR,
+            border_color=BUTTON_SECONDARY_COLOR,
         )
-        anio_entry.grid(row=2, column=1, padx=5, pady=5, ipady=4)
-        form_frame.pack(anchor="w")
+        anio_entry.pack(fill="x")
+        resultado_frame = ctk.CTkFrame(self.content_frame, fg_color=FRAME_BG_COLOR)
+        resultado_frame.pack(fill="both", pady=20, expand=True)
+        ctk.CTkLabel(
+            resultado_frame, text="Resultado de la Nómina Generada", font=FONT_BOLD
+        ).pack(pady=10)
+        tree_resultado = crear_tabla(
+            resultado_frame,
+            ("Empleado", "Cédula", "Salario Base", "Deducciones", "Salario Neto"),
+            widths={
+                "Empleado": 200,
+                "Cédula": 100,
+                "Salario Base": 100,
+                "Deducciones": 100,
+                "Salario Neto": 100,
+            },
+        )
+        tree_resultado.pack(fill="both", expand=True, padx=10, pady=10)
 
         def generar():
+            for i in tree_resultado.get_children():
+                tree_resultado.delete(i)
             nombre_empresa = empresa_combo.get()
             try:
-                mes = int(mes_entry.get())
-                anio = int(anio_entry.get())
-                if not (1 <= mes <= 12 and 2000 <= anio <= 2100):
-                    raise ValueError
+                mes, anio = int(mes_entry.get()), int(anio_entry.get())
             except (ValueError, TypeError):
+                messagebox.showerror(
+                    "Entrada no válida", "Mes y año deben ser números."
+                )
+                return
+            if not (1 <= mes <= 12 and 2000 <= anio <= 2100):
                 messagebox.showerror(
                     "Entrada no válida",
                     "Por favor, introduce un mes (1-12) y año válidos.",
@@ -1615,47 +1538,52 @@ class MainFrame(tk.Frame):
                 messagebox.showerror("Error", "Debes seleccionar una empresa")
                 return
             id_empresa = empresa_map.get(nombre_empresa)
-            self.controller.config(cursor="watch")
-            self.controller.update_idletasks()
-            success, msg = db_manager.ejecutar_nomina_db(
-                self.controller.conexion, id_empresa, mes, anio
+            success, msg, id_nomina = db_manager.ejecutar_nomina_db(
+                id_empresa, mes, anio
             )
-            self.controller.config(cursor="")
             messagebox.showinfo("Resultado", msg)
+            if success and id_nomina:
+                detalles_nomina = db_manager.get_nomina_generada_detalle_db(id_nomina)
+                for detalle in detalles_nomina or []:
+                    tree_resultado.insert(
+                        "",
+                        "end",
+                        values=(
+                            detalle["Empleado"],
+                            detalle["Cedula_Identidad"],
+                            f"{detalle['Salario_Base']:.2f}",
+                            f"{detalle['Total_Deducciones']:.2f}",
+                            f"{detalle['Salario_Neto_Pagado']:.2f}",
+                        ),
+                    )
 
-        ttk.Button(
-            self.content_frame,
+        ctk.CTkButton(
+            form_container,
             text="Generar Nómina",
             command=generar,
-            style="Accent.TButton",
-        ).pack(pady=10, anchor="w")
+            height=40,
+            corner_radius=10,
+            fg_color=ACCENT_PURPLE,
+            hover_color=ACCENT_PINK,
+        ).pack(pady=20, anchor="w")
 
     def show_mis_postulaciones(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Mis Postulaciones Realizadas",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Mis Postulaciones Realizadas", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         postulaciones = db_manager.get_postulaciones_por_postulante(
-            self.controller.conexion, self.controller.usuario_actual["ID_Usuario"]
+            self.controller.usuario_actual["ID_Usuario"]
         )
-        self.controller.config(cursor="")
         if not postulaciones:
-            tk.Label(
-                self.content_frame,
-                text="No has realizado ninguna postulación.",
-                bg=BG_COLOR,
-                fg=FG_COLOR,
-                font=FONT_NORMAL,
+            ctk.CTkLabel(
+                self.content_frame, text="No has realizado ninguna postulación."
             ).pack()
             return
+        tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        tree_frame.pack(fill="both", expand=True, pady=10)
         tree = crear_tabla(
-            self.content_frame, ("Cargo", "Empresa", "Salario", "Fecha", "Estatus")
+            tree_frame, ("Cargo", "Empresa", "Salario", "Fecha", "Estatus")
         )
         for p in postulaciones:
             salario = (
@@ -1663,11 +1591,7 @@ class MainFrame(tk.Frame):
                 if p["Salario_Ofrecido"]
                 else "N/A"
             )
-            fecha = (
-                p["Fecha_Postulacion"].strftime("%Y-%m-%d %H:%M")
-                if p["Fecha_Postulacion"]
-                else "N/A"
-            )
+            fecha = p["Fecha_Postulacion"] if p["Fecha_Postulacion"] else "N/A"
             tree.insert(
                 "",
                 "end",
@@ -1679,50 +1603,37 @@ class MainFrame(tk.Frame):
                     p["Estatus"],
                 ),
             )
-        tree.pack(fill="both", expand=True, pady=5)
+        tree.pack(fill="both", expand=True)
 
     def show_constancia(self):
         self.show_welcome_message()
-        tk.Label(
-            self.content_frame,
-            text="Constancia de Trabajo",
-            font=FONT_TITLE,
-            bg=BG_COLOR,
-            fg=FG_COLOR,
+        ctk.CTkLabel(
+            self.content_frame, text="Constancia de Trabajo", font=FONT_TITLE
         ).pack(pady=10, anchor="w")
-        self.controller.config(cursor="watch")
-        self.controller.update_idletasks()
         texto_constancia = db_manager.get_datos_constancia(
-            self.controller.conexion, self.controller.usuario_actual["ID_Usuario"]
+            self.controller.usuario_actual["ID_Usuario"]
         )
-        self.controller.config(cursor="")
         if texto_constancia:
-            text_widget = tk.Text(
+            textbox = ctk.CTkTextbox(
                 self.content_frame,
-                height=15,
-                width=80,
-                font=("Courier", 11),
+                height=250,
+                font=("Courier", 12),
                 wrap="word",
-                bg=ENTRY_BG,
-                fg=FG_COLOR,
-                relief=tk.FLAT,
-                bd=0,
-                padx=10,
-                pady=10,
+                fg_color=ENTRY_BG_COLOR,
+                border_color=BUTTON_SECONDARY_COLOR,
+                text_color=TEXT_COLOR,
             )
-            text_widget.insert(tk.END, texto_constancia)
-            text_widget.config(state="disabled")
-            text_widget.pack(pady=10, fill="x")
+            textbox.pack(pady=10, fill="x", expand=True)
+            textbox.insert(tk.END, texto_constancia)
+            textbox.configure(state="disabled")
         else:
-            tk.Label(
+            ctk.CTkLabel(
                 self.content_frame,
                 text="No se pudo generar la constancia. No se encontró un contrato activo.",
-                bg=BG_COLOR,
-                fg=FG_COLOR,
-                font=FONT_NORMAL,
             ).pack()
 
 
 if __name__ == "__main__":
-    app = App()
+    first_run = not db_manager.hay_usuarios_registrados()
+    app = App(is_first_run=first_run)
     app.mainloop()
