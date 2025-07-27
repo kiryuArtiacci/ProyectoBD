@@ -50,6 +50,7 @@ class FormularioBase(ctk.CTkToplevel):
             text=f"{texto_label}:",
             anchor="w",
             font=FONT_NORMAL,
+            text_color=TEXT_COLOR,  # CORREGIDO
         )
         widget = None
         if tipo == "entry":
@@ -147,6 +148,7 @@ class CrearUsuarioWindow(FormularioBase):
             corner_radius=10,
             height=40,
             fg_color=ACCENT_PURPLE,
+            text_color=TEXT_COLOR,
             hover_color=ACCENT_PINK,
         ).pack(pady=15)
         self.actualizar_campos(None)
@@ -249,6 +251,7 @@ class ActualizarUsuarioWindow(FormularioBase):
             height=40,
             fg_color=ACCENT_PURPLE,
             hover_color=ACCENT_PINK,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=15)
 
     def populate_postulante(self):
@@ -303,7 +306,12 @@ class GestionarExperienciaWindow(FormularioBase):
         self.id_postulante = self.controller.usuario_actual["ID_Usuario"]
         add_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
         add_frame.pack(fill="x", pady=10)
-        ctk.CTkLabel(add_frame, text="Añadir/Editar Experiencia", font=FONT_BOLD).pack(
+        ctk.CTkLabel(
+            add_frame,
+            text="Añadir/Editar Experiencia",
+            font=FONT_BOLD,
+            text_color=TEXT_COLOR,
+        ).pack(  # CORREGIDO
             pady=(5, 10)
         )
         self.crear_campo(add_frame, "Empresa")
@@ -318,10 +326,13 @@ class GestionarExperienciaWindow(FormularioBase):
             corner_radius=10,
             fg_color=ACCENT_PURPLE,
             hover_color=ACCENT_PINK,
+            text_color=TEXT_COLOR,
         ).pack(pady=10)
         tree_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
         tree_frame.pack(fill="both", expand=True, pady=10)
-        ctk.CTkLabel(tree_frame, text="Mis Experiencias", font=FONT_BOLD).pack(
+        ctk.CTkLabel(
+            tree_frame, text="Mis Experiencias", font=FONT_BOLD, text_color=TEXT_COLOR
+        ).pack(  # CORREGIDO
             pady=(5, 10)
         )
         self.tree = crear_tabla(
@@ -335,6 +346,7 @@ class GestionarExperienciaWindow(FormularioBase):
             corner_radius=10,
             fg_color=BUTTON_SECONDARY_COLOR,
             hover_color=BUTTON_SECONDARY_HOVER,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="e", padx=10)
         self.populate_tree()
 
@@ -411,11 +423,16 @@ class GestionCatalogoWindow(FormularioBase):
         add_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
         add_frame.pack(fill="x", pady=5)
         ctk.CTkLabel(
-            add_frame, text=f"Agregar Nuevo/a {title.split(' ')[-1]}", font=FONT_BOLD
+            add_frame,
+            text=f"Agregar Nuevo/a {title.split(' ')[-1]}",
+            font=FONT_BOLD,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=(5, 10))
         entry_frame = ctk.CTkFrame(add_frame, fg_color="transparent")
         entry_frame.pack(fill="x", padx=10)
-        ctk.CTkLabel(entry_frame, text="Nombre:", font=FONT_NORMAL).pack(
+        ctk.CTkLabel(
+            entry_frame, text="Nombre:", font=FONT_NORMAL, text_color=TEXT_COLOR
+        ).pack(  # CORREGIDO
             side=tk.LEFT, padx=5
         )
         self.new_entry = ctk.CTkEntry(
@@ -432,6 +449,7 @@ class GestionCatalogoWindow(FormularioBase):
             width=80,
             fg_color=BUTTON_SECONDARY_COLOR,
             hover_color=BUTTON_SECONDARY_HOVER,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side=tk.LEFT, padx=5)
         tree_frame = ctk.CTkFrame(self.main_frame, fg_color=FRAME_BG_COLOR)
         tree_frame.pack(fill="both", expand=True, pady=10)
@@ -448,6 +466,7 @@ class GestionCatalogoWindow(FormularioBase):
             width=80,
             fg_color=BUTTON_SECONDARY_COLOR,
             hover_color=BUTTON_SECONDARY_HOVER,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side="right", padx=5)
         ctk.CTkButton(
             action_frame,
@@ -456,6 +475,7 @@ class GestionCatalogoWindow(FormularioBase):
             width=80,
             fg_color=ACCENT_PINK,
             hover_color=ACCENT_PURPLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side="right")
         self.populate_tree()
 
@@ -556,6 +576,7 @@ class CrearVacanteWindow(FormularioBase):
             corner_radius=10,
             fg_color=ACCENT_PURPLE,
             hover_color=ACCENT_PINK,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=15)
 
     def guardar(self):
@@ -627,6 +648,7 @@ class ActualizarVacanteWindow(FormularioBase):
             corner_radius=10,
             fg_color=ACCENT_PURPLE,
             hover_color=ACCENT_PINK,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=15)
 
     def guardar(self):
@@ -765,6 +787,7 @@ class LoginFrame(ctk.CTkFrame):
             corner_radius=10,
             fg_color=ACCENT_PURPLE,
             hover_color=ACCENT_PINK,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=20, ipady=5)
         if self.controller.is_first_run:
             ctk.CTkButton(
@@ -775,6 +798,7 @@ class LoginFrame(ctk.CTkFrame):
                 corner_radius=10,
                 fg_color=BUTTON_SECONDARY_COLOR,
                 hover_color=BUTTON_SECONDARY_HOVER,
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack(pady=10)
 
     def crear_primer_usuario(self):
@@ -883,6 +907,7 @@ class MainFrame(ctk.CTkFrame):
                 corner_radius=8,
                 fg_color=BUTTON_SECONDARY_COLOR,
                 hover_color=BUTTON_SECONDARY_HOVER,
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack(pady=4, padx=20, fill="x")
         ctk.CTkButton(
             menu_frame,
@@ -892,6 +917,7 @@ class MainFrame(ctk.CTkFrame):
             corner_radius=8,
             fg_color=ACCENT_PINK,
             hover_color=ACCENT_PURPLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side="bottom", pady=20, padx=20, fill="x")
         self.show_welcome_message()
 
@@ -918,7 +944,10 @@ class MainFrame(ctk.CTkFrame):
     def show_gestionar_empresas(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Gestionar Empresas", font=FONT_TITLE
+            self.content_frame,
+            text="Gestionar Empresas",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         empresas = db_manager.get_catalogo(
             "Empresas",
@@ -933,7 +962,11 @@ class MainFrame(ctk.CTkFrame):
             ],
         )
         if not empresas:
-            ctk.CTkLabel(self.content_frame, text="No hay empresas registradas.").pack()
+            ctk.CTkLabel(
+                self.content_frame,
+                text="No hay empresas registradas.",
+                text_color=TEXT_COLOR,
+            ).pack()  # CORREGIDO
             return
         tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         tree_frame.pack(fill="both", expand=True, pady=5)
@@ -961,7 +994,10 @@ class MainFrame(ctk.CTkFrame):
     def show_menu_catalogos(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Gestionar Catálogos", font=FONT_TITLE
+            self.content_frame,
+            text="Gestionar Catálogos",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         catalogos = {
             "Áreas de Conocimiento": (
@@ -987,18 +1023,24 @@ class MainFrame(ctk.CTkFrame):
                 fg_color=BUTTON_SECONDARY_COLOR,
                 hover_color=BUTTON_SECONDARY_HOVER,
                 corner_radius=8,
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack(fill="x", padx=20, pady=5)
 
     def show_contratar_form(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Contratar Postulante", font=FONT_TITLE
+            self.content_frame,
+            text="Contratar Postulante",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         postulaciones = db_manager.get_postulaciones_para_contratar()
         bancos = db_manager.get_catalogo("Bancos", "ID_Banco", "Nombre_Banco")
         if not postulaciones:
             ctk.CTkLabel(
-                self.content_frame, text="No hay postulaciones recibidas."
+                self.content_frame,
+                text="No hay postulaciones recibidas.",
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack()
             return
         tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -1029,7 +1071,12 @@ class MainFrame(ctk.CTkFrame):
             ("Banco", "combo_banco"),
         ]
         for i, (label_text, widget_type) in enumerate(fields):
-            label = ctk.CTkLabel(form_frame, text=f"{label_text}:", font=FONT_NORMAL)
+            label = ctk.CTkLabel(
+                form_frame,
+                text=f"{label_text}:",
+                font=FONT_NORMAL,
+                text_color=TEXT_COLOR,
+            )  # CORREGIDO
             label.grid(row=i, column=0, padx=5, pady=8, sticky="w")
             widget = None
             if widget_type == "entry":
@@ -1040,19 +1087,23 @@ class MainFrame(ctk.CTkFrame):
                     fg_color=ENTRY_BG_COLOR,
                     border_color=BUTTON_SECONDARY_COLOR,
                 )
-            elif widget_type == "combo_contrato":
+            elif (
+                widget_type == "combo_contrato" or widget_type == "combo_banco"
+            ):  # CORREGIDO (Agrupado)
                 widget = ctk.CTkComboBox(
                     form_frame,
                     width=250,
-                    values=["Un mes", "Seis meses", "Un año", "Indefinido"],
+                    values=(
+                        ["Un mes", "Seis meses", "Un año", "Indefinido"]
+                        if widget_type == "combo_contrato"
+                        else list(bancos_map.keys())
+                    ),
                     state="readonly",
-                )
-            elif widget_type == "combo_banco":
-                widget = ctk.CTkComboBox(
-                    form_frame,
-                    width=250,
-                    values=list(bancos_map.keys()),
-                    state="readonly",
+                    text_color=TEXT_COLOR,
+                    fg_color=ENTRY_BG_COLOR,
+                    border_color=BUTTON_SECONDARY_COLOR,
+                    button_color=BUTTON_SECONDARY_COLOR,
+                    button_hover_color=BUTTON_SECONDARY_HOVER,
                 )
             if widget:
                 widget.grid(row=i, column=1, padx=5, pady=8, sticky="ew")
@@ -1111,12 +1162,15 @@ class MainFrame(ctk.CTkFrame):
             corner_radius=10,
             fg_color=ACCENT_PURPLE,
             hover_color=ACCENT_PINK,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=20, anchor="w")
 
     def show_buscar_vacantes(self, read_only=False):
         self.show_welcome_message()
         title = "Vacantes Disponibles" if not read_only else "Visualizar Vacantes"
-        ctk.CTkLabel(self.content_frame, text=title, font=FONT_TITLE).pack(
+        ctk.CTkLabel(
+            self.content_frame, text=title, font=FONT_TITLE, text_color=TEXT_COLOR
+        ).pack(  # CORREGIDO
             pady=10, anchor="w"
         )
         filter_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -1128,15 +1182,27 @@ class MainFrame(ctk.CTkFrame):
         area_map.update(
             {a["Nombre_Area"]: a["ID_Area_Conocimiento"] for a in areas or []}
         )
-        ctk.CTkLabel(filter_frame, text="Área:", font=FONT_NORMAL).pack(
+        ctk.CTkLabel(
+            filter_frame, text="Área:", font=FONT_NORMAL, text_color=TEXT_COLOR
+        ).pack(  # CORREGIDO
             side=tk.LEFT, padx=(0, 5)
         )
         area_combo = ctk.CTkComboBox(
-            filter_frame, values=list(area_map.keys()), state="readonly", width=180
+            filter_frame,
+            values=list(area_map.keys()),
+            state="readonly",
+            width=180,
+            text_color=TEXT_COLOR,  # CORREGIDO
+            fg_color=ENTRY_BG_COLOR,  # CORREGIDO
+            border_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_hover_color=BUTTON_SECONDARY_HOVER,  # CORREGIDO
         )
         area_combo.pack(side=tk.LEFT, padx=5)
         area_combo.set("Todas")
-        ctk.CTkLabel(filter_frame, text="Salario:", font=FONT_NORMAL).pack(
+        ctk.CTkLabel(
+            filter_frame, text="Salario:", font=FONT_NORMAL, text_color=TEXT_COLOR
+        ).pack(  # CORREGIDO
             side=tk.LEFT, padx=(10, 5)
         )
         salary_combo = ctk.CTkComboBox(
@@ -1144,6 +1210,11 @@ class MainFrame(ctk.CTkFrame):
             values=["Sin Orden", "Mayor a Menor", "Menor a Mayor"],
             state="readonly",
             width=150,
+            text_color=TEXT_COLOR,  # CORREGIDO
+            fg_color=ENTRY_BG_COLOR,  # CORREGIDO
+            border_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_hover_color=BUTTON_SECONDARY_HOVER,  # CORREGIDO
         )
         salary_combo.pack(side=tk.LEFT, padx=5)
         salary_combo.set("Sin Orden")
@@ -1187,6 +1258,7 @@ class MainFrame(ctk.CTkFrame):
             corner_radius=8,
             fg_color=BUTTON_SECONDARY_COLOR,
             hover_color=BUTTON_SECONDARY_HOVER,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side=tk.LEFT, padx=10)
         if not read_only:
             ctk.CTkButton(
@@ -1197,6 +1269,7 @@ class MainFrame(ctk.CTkFrame):
                 corner_radius=10,
                 fg_color=ACCENT_PURPLE,
                 hover_color=ACCENT_PINK,
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack(pady=10, anchor="e")
         populate_tree()
 
@@ -1216,11 +1289,16 @@ class MainFrame(ctk.CTkFrame):
     def show_recibos_pago(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Mis Recibos de Pago", font=FONT_TITLE
+            self.content_frame,
+            text="Mis Recibos de Pago",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         filter_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         filter_frame.pack(fill="x", pady=5)
-        ctk.CTkLabel(filter_frame, text="Mes (opc):").pack(side=tk.LEFT, padx=5)
+        ctk.CTkLabel(filter_frame, text="Mes (opc):", text_color=TEXT_COLOR).pack(
+            side=tk.LEFT, padx=5
+        )  # CORREGIDO
         mes_entry = ctk.CTkEntry(
             filter_frame,
             width=50,
@@ -1229,7 +1307,9 @@ class MainFrame(ctk.CTkFrame):
             border_color=BUTTON_SECONDARY_COLOR,
         )
         mes_entry.pack(side=tk.LEFT, padx=5)
-        ctk.CTkLabel(filter_frame, text="Año (opc):").pack(side=tk.LEFT, padx=5)
+        ctk.CTkLabel(filter_frame, text="Año (opc):", text_color=TEXT_COLOR).pack(
+            side=tk.LEFT, padx=5
+        )  # CORREGIDO
         anio_entry = ctk.CTkEntry(
             filter_frame,
             width=70,
@@ -1273,20 +1353,26 @@ class MainFrame(ctk.CTkFrame):
             corner_radius=8,
             fg_color=BUTTON_SECONDARY_COLOR,
             hover_color=BUTTON_SECONDARY_HOVER,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side=tk.LEFT, padx=10)
         populate_recibos()
 
     def show_mis_vacantes(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Mis Vacantes Publicadas", font=FONT_TITLE
+            self.content_frame,
+            text="Mis Vacantes Publicadas",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         vacantes = db_manager.get_vacantes_por_empresa(
             self.controller.usuario_actual["ID_Usuario"]
         )
         if not vacantes:
             ctk.CTkLabel(
-                self.content_frame, text="No tienes vacantes publicadas."
+                self.content_frame,
+                text="No tienes vacantes publicadas.",
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack()
             return
         tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -1359,6 +1445,7 @@ class MainFrame(ctk.CTkFrame):
             command=editar_vacante,
             fg_color=BUTTON_SECONDARY_COLOR,
             hover_color=BUTTON_SECONDARY_HOVER,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side="right", padx=10)
         ctk.CTkButton(
             buttons_frame,
@@ -1366,31 +1453,46 @@ class MainFrame(ctk.CTkFrame):
             command=eliminar_vacante,
             fg_color=ACCENT_PINK,
             hover_color=ACCENT_PURPLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side="right")
 
     def show_reportes_nomina(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Reportes de Nómina", font=FONT_TITLE
+            self.content_frame,
+            text="Reportes de Nómina",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         rep1_frame = ctk.CTkFrame(self.content_frame, fg_color=FRAME_BG_COLOR)
         rep1_frame.pack(fill="x", pady=5)
-        ctk.CTkLabel(rep1_frame, text="Nómina por Empresa", font=FONT_BOLD).pack(
+        ctk.CTkLabel(
+            rep1_frame, text="Nómina por Empresa", font=FONT_BOLD, text_color=TEXT_COLOR
+        ).pack(  # CORREGIDO
             pady=10
         )
         empresas = db_manager.get_catalogo("Empresas", "ID_Empresa", "Nombre_Empresa")
         empresa_map = {e["Nombre_Empresa"]: e["ID_Empresa"] for e in empresas or []}
         filter_controls = ctk.CTkFrame(rep1_frame, fg_color="transparent")
         filter_controls.pack(fill="x", padx=10)
-        ctk.CTkLabel(filter_controls, text="Empresa:").pack(side=tk.LEFT)
+        ctk.CTkLabel(filter_controls, text="Empresa:", text_color=TEXT_COLOR).pack(
+            side=tk.LEFT
+        )  # CORREGIDO
         empresa_combo = ctk.CTkComboBox(
             filter_controls,
             values=list(empresa_map.keys()),
             state="readonly",
             width=200,
+            text_color=TEXT_COLOR,  # CORREGIDO
+            fg_color=ENTRY_BG_COLOR,  # CORREGIDO
+            border_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_hover_color=BUTTON_SECONDARY_HOVER,  # CORREGIDO
         )
         empresa_combo.pack(side=tk.LEFT, padx=5)
-        ctk.CTkLabel(filter_controls, text="Mes:").pack(side=tk.LEFT)
+        ctk.CTkLabel(filter_controls, text="Mes:", text_color=TEXT_COLOR).pack(
+            side=tk.LEFT
+        )  # CORREGIDO
         mes_entry = ctk.CTkEntry(
             filter_controls,
             width=50,
@@ -1399,7 +1501,9 @@ class MainFrame(ctk.CTkFrame):
             border_color=BUTTON_SECONDARY_COLOR,
         )
         mes_entry.pack(side=tk.LEFT, padx=5)
-        ctk.CTkLabel(filter_controls, text="Año:").pack(side=tk.LEFT)
+        ctk.CTkLabel(filter_controls, text="Año:", text_color=TEXT_COLOR).pack(
+            side=tk.LEFT
+        )  # CORREGIDO
         anio_entry = ctk.CTkEntry(
             filter_controls,
             width=70,
@@ -1441,12 +1545,19 @@ class MainFrame(ctk.CTkFrame):
                 )
 
         ctk.CTkButton(
-            filter_controls, text="Buscar", command=buscar_nomina, width=80
+            filter_controls,
+            text="Buscar",
+            command=buscar_nomina,
+            width=80,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(side=tk.LEFT, padx=10)
         rep2_frame = ctk.CTkFrame(self.content_frame, fg_color=FRAME_BG_COLOR)
         rep2_frame.pack(fill="both", pady=10, expand=True)
         ctk.CTkLabel(
-            rep2_frame, text="Nómina General por Empresa", font=FONT_BOLD
+            rep2_frame,
+            text="Nómina General por Empresa",
+            font=FONT_BOLD,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10)
         tree2_frame = ctk.CTkFrame(rep2_frame, fg_color="transparent")
         tree2_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -1467,21 +1578,40 @@ class MainFrame(ctk.CTkFrame):
     def show_nomina_form(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Ejecutar Nómina Mensual", font=FONT_TITLE
+            self.content_frame,
+            text="Ejecutar Nómina Mensual",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         form_container = ctk.CTkFrame(self.content_frame, fg_color="transparent")
         form_container.pack(fill="x", pady=5, anchor="w")
         empresas = db_manager.get_catalogo("Empresas", "ID_Empresa", "Nombre_Empresa")
         if not empresas:
-            ctk.CTkLabel(self.content_frame, text="No hay empresas registradas.").pack()
+            ctk.CTkLabel(
+                self.content_frame,
+                text="No hay empresas registradas.",
+                text_color=TEXT_COLOR,
+            ).pack()  # CORREGIDO
             return
         empresa_map = {e["Nombre_Empresa"]: e["ID_Empresa"] for e in empresas or []}
-        ctk.CTkLabel(form_container, text="Empresa:").pack(anchor="w")
+        ctk.CTkLabel(form_container, text="Empresa:", text_color=TEXT_COLOR).pack(
+            anchor="w"
+        )  # CORREGIDO
         empresa_combo = ctk.CTkComboBox(
-            form_container, values=list(empresa_map.keys()), state="readonly", width=300
+            form_container,
+            values=list(empresa_map.keys()),
+            state="readonly",
+            width=300,
+            text_color=TEXT_COLOR,  # CORREGIDO
+            fg_color=ENTRY_BG_COLOR,  # CORREGIDO
+            border_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_color=BUTTON_SECONDARY_COLOR,  # CORREGIDO
+            button_hover_color=BUTTON_SECONDARY_HOVER,  # CORREGIDO
         )
         empresa_combo.pack(fill="x")
-        ctk.CTkLabel(form_container, text="Mes (1-12):").pack(anchor="w", pady=(10, 0))
+        ctk.CTkLabel(form_container, text="Mes (1-12):", text_color=TEXT_COLOR).pack(
+            anchor="w", pady=(10, 0)
+        )  # CORREGIDO
         mes_entry = ctk.CTkEntry(
             form_container,
             width=300,
@@ -1490,7 +1620,9 @@ class MainFrame(ctk.CTkFrame):
             border_color=BUTTON_SECONDARY_COLOR,
         )
         mes_entry.pack(fill="x")
-        ctk.CTkLabel(form_container, text="Año (YYYY):").pack(anchor="w", pady=(10, 0))
+        ctk.CTkLabel(form_container, text="Año (YYYY):", text_color=TEXT_COLOR).pack(
+            anchor="w", pady=(10, 0)
+        )  # CORREGIDO
         anio_entry = ctk.CTkEntry(
             form_container,
             width=300,
@@ -1502,7 +1634,10 @@ class MainFrame(ctk.CTkFrame):
         resultado_frame = ctk.CTkFrame(self.content_frame, fg_color=FRAME_BG_COLOR)
         resultado_frame.pack(fill="both", pady=20, expand=True)
         ctk.CTkLabel(
-            resultado_frame, text="Resultado de la Nómina Generada", font=FONT_BOLD
+            resultado_frame,
+            text="Resultado de la Nómina Generada",
+            font=FONT_BOLD,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10)
         tree_resultado = crear_tabla(
             resultado_frame,
@@ -1565,19 +1700,25 @@ class MainFrame(ctk.CTkFrame):
             corner_radius=10,
             fg_color=ACCENT_PURPLE,
             hover_color=ACCENT_PINK,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=20, anchor="w")
 
     def show_mis_postulaciones(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Mis Postulaciones Realizadas", font=FONT_TITLE
+            self.content_frame,
+            text="Mis Postulaciones Realizadas",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         postulaciones = db_manager.get_postulaciones_por_postulante(
             self.controller.usuario_actual["ID_Usuario"]
         )
         if not postulaciones:
             ctk.CTkLabel(
-                self.content_frame, text="No has realizado ninguna postulación."
+                self.content_frame,
+                text="No has realizado ninguna postulación.",
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack()
             return
         tree_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
@@ -1608,7 +1749,10 @@ class MainFrame(ctk.CTkFrame):
     def show_constancia(self):
         self.show_welcome_message()
         ctk.CTkLabel(
-            self.content_frame, text="Constancia de Trabajo", font=FONT_TITLE
+            self.content_frame,
+            text="Constancia de Trabajo",
+            font=FONT_TITLE,
+            text_color=TEXT_COLOR,  # CORREGIDO
         ).pack(pady=10, anchor="w")
         texto_constancia = db_manager.get_datos_constancia(
             self.controller.usuario_actual["ID_Usuario"]
@@ -1630,6 +1774,7 @@ class MainFrame(ctk.CTkFrame):
             ctk.CTkLabel(
                 self.content_frame,
                 text="No se pudo generar la constancia. No se encontró un contrato activo.",
+                text_color=TEXT_COLOR,  # CORREGIDO
             ).pack()
 
 
